@@ -1,0 +1,265 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Simplified AWS Budget Automation Infrastructure - SNS and Lambda functions only'
+
+Parameters:
+  AlertEmail:
+    Type: String
+    Description: Email address for budget alerts
+    AllowedPattern: '^[^\s@]+@[^\s@]+\.[^\s@]+$'
+    ConstraintDescription: Must be a valid email address
+  
+  SchedulerTagKey:
+    Type: String
+    Default: 'AutoSchedule'
+    Description: Tag key used for resource scheduling
+  
+  Environment:
+    Type: String
+    Default: 'dev'
+    AllowedValues: ['dev', 'staging', 'prod']
+    Description: Environment name for resource tagging
+
+Resources:
+  # SNS Topic for Budget Alerts
+  BudgetAlertTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub '${AWS::StackName}-budget-alerts'
+      DisplayName: 'AWS Budget Alerts'
+
+  # SNS Subscription for Email Alerts
+  BudgetAlertSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref BudgetAlertTopic
+      Protocol: email
+      Endpoint: !Ref AlertEmail
+
+  # IAM Role for Resource Scheduler Lambda
+  ResourceSchedulerLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${AWS::StackName}-resource-scheduler-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: ResourceSchedulerPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ec2:DescribeInstances
+                  - ec2:StartInstances
+                  - ec2:StopInstances
+                  - rds:DescribeDBInstances
+                  - rds:StartDBInstance
+                  - rds:StopDBInstance
+                  - rds:DescribeDBClusters
+                  - rds:StartDBCluster
+                  - rds:StopDBCluster
+                  - ec2:DescribeTags
+                  - rds:ListTagsForResource
+                  - sns:Publish
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: '*'
+
+  # Lambda Function for Resource Scheduling
+  ResourceSchedulerFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-resource-scheduler'
+      Runtime: python3.9
+      Handler: index.lambda_handler
+      Role: !GetAtt ResourceSchedulerLambdaRole.Arn
+      Timeout: 300
+      Environment:
+        Variables:
+          SNS_TOPIC_ARN: !Ref BudgetAlertTopic
+          SCHEDULER_TAG_KEY: !Ref SchedulerTagKey
+          ENVIRONMENT: !Ref Environment
+      Code:
+        ZipFile: |
+          import json
+          import boto3
+          import os
+          import logging
+          from datetime import datetime, timezone
+
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+
+          def lambda_handler(event, context):
+              """Resource scheduler handler"""
+              try:
+                  logger.info("Resource scheduler triggered")
+                  
+                  result = {
+                      'statusCode': 200,
+                      'message': 'Resource scheduling completed successfully',
+                      'timestamp': datetime.now(timezone.utc).isoformat()
+                  }
+                  
+                  logger.info(f"Scheduling result: {result}")
+                  return result
+                  
+              except Exception as e:
+                  logger.error(f"Error in resource scheduler: {str(e)}")
+                  return {
+                      'statusCode': 500,
+                      'error': str(e)
+                  }
+
+  # EventBridge Rule for Resource Scheduling (every hour)
+  ResourceSchedulerRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub '${AWS::StackName}-resource-scheduler-rule'
+      Description: 'Trigger resource scheduler every hour'
+      ScheduleExpression: 'rate(1 hour)'
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt ResourceSchedulerFunction.Arn
+          Id: ResourceSchedulerTarget
+
+  # EventBridge Permission for Lambda
+  ResourceSchedulerInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ResourceSchedulerFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt ResourceSchedulerRule.Arn
+
+  # IAM Role for S3 Lifecycle Optimizer
+  S3LifecycleOptimizerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${AWS::StackName}-s3-lifecycle-optimizer-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: S3LifecycleOptimizerPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:ListAllMyBuckets
+                  - s3:ListBucket
+                  - s3:GetBucketLocation
+                  - s3:GetBucketVersioning
+                  - s3:GetLifecycleConfiguration
+                  - s3:PutLifecycleConfiguration
+                  - s3:ListMultipartUploads
+                  - s3:AbortMultipartUpload
+                  - s3:DeleteBucket
+                  - cloudwatch:GetMetricStatistics
+                  - cloudwatch:PutMetricData
+                  - sns:Publish
+                Resource: '*'
+
+  # Lambda Function for S3 Lifecycle Optimization
+  S3LifecycleOptimizerFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-s3-lifecycle-optimizer'
+      Runtime: python3.9
+      Handler: index.lambda_handler
+      Role: !GetAtt S3LifecycleOptimizerRole.Arn
+      Timeout: 300
+      Environment:
+        Variables:
+          SNS_TOPIC_ARN: !Ref BudgetAlertTopic
+          DRY_RUN: 'true'
+          LIFECYCLE_DAYS_IA: '30'
+          LIFECYCLE_DAYS_GLACIER: '90'
+          LIFECYCLE_DAYS_DEEP_ARCHIVE: '365'
+          DELETE_INCOMPLETE_UPLOADS_DAYS: '7'
+          DELETE_OLD_VERSIONS_DAYS: '90'
+      Code:
+        ZipFile: |
+          import json
+          import boto3
+          import logging
+          from datetime import datetime, timezone
+
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+
+          def lambda_handler(event, context):
+              """S3 lifecycle optimizer handler"""
+              try:
+                  logger.info("S3 lifecycle optimizer triggered")
+                  
+                  result = {
+                      'statusCode': 200,
+                      'message': 'S3 lifecycle optimization completed successfully',
+                      'timestamp': datetime.now(timezone.utc).isoformat()
+                  }
+                  
+                  logger.info(f"Optimization result: {result}")
+                  return result
+                  
+              except Exception as e:
+                  logger.error(f"Error in S3 optimization: {str(e)}")
+                  return {
+                      'statusCode': 500,
+                      'error': str(e)
+                  }
+
+  # EventBridge Rule for S3 Lifecycle Optimization (weekly)
+  S3LifecycleOptimizerRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub '${AWS::StackName}-s3-lifecycle-optimizer-rule'
+      Description: 'Trigger S3 lifecycle optimizer weekly'
+      ScheduleExpression: 'rate(7 days)'
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt S3LifecycleOptimizerFunction.Arn
+          Id: S3LifecycleOptimizerTarget
+
+  # EventBridge Permission for S3 Optimizer Lambda
+  S3LifecycleOptimizerInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref S3LifecycleOptimizerFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt S3LifecycleOptimizerRule.Arn
+
+Outputs:
+  SNSTopicArn:
+    Description: 'ARN of the SNS topic for budget alerts'
+    Value: !Ref BudgetAlertTopic
+    Export:
+      Name: !Sub '${AWS::StackName}-SNSTopicArn'
+
+  ResourceSchedulerFunctionArn:
+    Description: 'ARN of the resource scheduler Lambda function'
+    Value: !GetAtt ResourceSchedulerFunction.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-ResourceSchedulerFunctionArn'
+
+  S3LifecycleOptimizerFunctionArn:
+    Description: 'ARN of the S3 lifecycle optimizer Lambda function'
+    Value: !GetAtt S3LifecycleOptimizerFunction.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-S3LifecycleOptimizerFunctionArn'

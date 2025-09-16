@@ -1,0 +1,293 @@
+# AWS Portfolio Setup - .gitignore
+
+# ==============================================================================
+# AWS & Credentials
+# ==============================================================================
+
+# AWS Credentials and Config
+.aws/
+aws-credentials.json
+*.pem
+*.key
+*.crt
+
+# Environment Variables
+.env
+.env.local
+.env.production
+.env.staging
+*.env
+
+# AWS CLI Output Files
+aws-output.json
+cloudformation-outputs.json
+
+# Terraform Files (if used later)
+*.tfstate
+*.tfstate.*
+.terraform/
+terraform.tfvars
+*.tfplan
+
+# CloudFormation Package Files
+packaged-template.yaml
+packaged-template.json
+
+# ==============================================================================
+# Logs & Monitoring
+# ==============================================================================
+
+# Log Files
+*.log
+logs/
+aws-logs/
+cloudwatch-logs/
+
+# Monitoring Data
+metrics/
+dashboard-exports/
+
+# Cost Reports
+cost-reports/
+billing-data/
+
+# ==============================================================================
+# Build & Dependencies
+# ==============================================================================
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+
+# Go
+vendor/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+go.work
+
+# Java
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+hs_err_pid*
+target/
+.mvn/
+mvnw
+mvnw.cmd
+
+# Docker
+.dockerignore
+
+# ==============================================================================
+# IDE & Editor Files
+# ==============================================================================
+
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Eclipse
+.metadata
+bin/
+tmp/
+*.tmp
+*.bak
+*.swp
+*~.nib
+local.properties
+.settings/
+.loadpath
+.recommenders
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# ==============================================================================
+# Operating System Files
+# ==============================================================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# ==============================================================================
+# Temporary & Cache Files
+# ==============================================================================
+
+# Temporary Files
+*.tmp
+*.temp
+*.bak
+*.backup
+*.old
+*.orig
+
+# Cache Directories
+.cache/
+.npm/
+.yarn/
+.pip-cache/
+
+# Coverage Reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# ==============================================================================
+# Project Specific
+# ==============================================================================
+
+# Lambda Deployment Packages
+lambda-packages/
+*.zip
+
+# S3 Sync Exclusions
+s3-sync-exclude.txt
+
+# Local Development
+local-config/
+dev-data/
+test-data/
+
+# Documentation Build
+_site/
+.jekyll-cache/
+.jekyll-metadata
+
+# ==============================================================================
+# Security & Sensitive Data
+# ==============================================================================
+
+# Private Keys & Certificates
+*.pem
+*.key
+*.p12
+*.pfx
+*.cer
+*.crt
+*.der
+
+# API Keys & Secrets
+secrets.json
+api-keys.json
+.secrets
+
+# Database Dumps
+*.sql
+*.db
+*.sqlite
+*.sqlite3
+
+# ==============================================================================
+# Exclude Specific AWS Portfolio Files
+# ==============================================================================
+
+# Exclude user-specific AWS config
+my-aws-config.json
+personal-notes.md
+
+# Exclude local IAM policy experiments
+experimental-policies/
+policy-drafts/
+
+# Exclude personal cost data
+my-costs.json
+personal-billing.csv

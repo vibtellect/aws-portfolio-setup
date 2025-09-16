@@ -1,0 +1,134 @@
+{
+	"Version": "2012-10-17",
+	"Statement": [
+		{
+			"Sid": "GeneralDeveloperAccess",
+			"Effect": "Allow",
+			"Action": [
+				"ec2:*",
+				"s3:*",
+				"lambda:*",
+				"dynamodb:*",
+				"rds:*",
+				"logs:*",
+				"iam:GetRole",
+				"iam:GetUser",
+				"iam:GetPolicy",
+				"iam:ListRoles",
+				"iam:ListUsers",
+				"iam:ListPolicies",
+				"iam:PassRole",
+				"sts:AssumeRole",
+				"sts:GetCallerIdentity"
+			],
+			"Resource": "*"
+		},
+		{
+			"Sid": "CostExplorerFullAccess",
+			"Effect": "Allow",
+			"Action": [
+				"ce:*"
+			],
+			"Resource": "*"
+		},
+		{
+			"Sid": "BillingReadAccess",
+			"Effect": "Allow",
+			"Action": [
+				"aws-portal:ViewBilling",
+				"aws-portal:ViewUsage"
+			],
+			"Resource": "*"
+		},
+		{
+			"Sid": "CloudWatchFullAccess",
+			"Effect": "Allow",
+			"Action": [
+				"cloudwatch:*"
+			],
+			"Resource": "*"
+		},
+		{
+			"Sid": "CloudWatchLogsFullAccess",
+			"Effect": "Allow",
+			"Action": [
+				"logs:*"
+			],
+			"Resource": "*"
+		},
+		{
+			"Sid": "BudgetsAccess",
+			"Effect": "Allow",
+			"Action": [
+				"budgets:*"
+			],
+			"Resource": "*"
+		},
+		{
+			"Sid": "SNSFullAccess",
+			"Effect": "Allow",
+			"Action": [
+				"sns:*"
+			],
+			"Resource": "*"
+		},
+		{
+			"Sid": "CloudFormationFullAccess",
+			"Effect": "Allow",
+			"Action": [
+				"cloudformation:*"
+			],
+			"Resource": "*"
+		},
+		{
+			"Sid": "IAMForCloudFormation",
+			"Effect": "Allow",
+			"Action": [
+				"iam:CreateRole",
+				"iam:DeleteRole",
+				"iam:AttachRolePolicy",
+				"iam:DetachRolePolicy",
+				"iam:PutRolePolicy",
+				"iam:DeleteRolePolicy",
+				"iam:UpdateRole",
+				"iam:TagRole",
+				"iam:UntagRole",
+				"iam:CreateInstanceProfile",
+				"iam:DeleteInstanceProfile",
+				"iam:AddRoleToInstanceProfile",
+				"iam:RemoveRoleFromInstanceProfile"
+			],
+			"Resource": [
+				"arn:aws:iam::*:role/aws-budget-automation-*",
+				"arn:aws:iam::*:instance-profile/aws-budget-automation-*"
+			]
+		},
+		{
+			"Sid": "EventBridgeAccess",
+			"Effect": "Allow",
+			"Action": [
+				"events:*"
+			],
+			"Resource": "*"
+		},
+		{
+			"Sid": "ApplicationAutoScalingAccess",
+			"Effect": "Allow",
+			"Action": [
+				"application-autoscaling:*"
+			],
+			"Resource": "*"
+		},
+		{
+			"Sid": "TaggingAccess",
+			"Effect": "Allow",
+			"Action": [
+				"tag:GetResources",
+				"tag:TagResources",
+				"tag:UntagResources",
+				"resource-groups:*"
+			],
+			"Resource": "*"
+		}
+	]
+}
