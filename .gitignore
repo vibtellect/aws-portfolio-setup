@@ -291,3 +291,6 @@ policy-drafts/
 # Exclude personal cost data
 my-costs.json
 personal-billing.csv
+
+# Kiro tool files
+.kiro/
