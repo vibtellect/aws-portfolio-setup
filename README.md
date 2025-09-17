@@ -2,7 +2,7 @@
 
 **Production-ready AWS development environment** mit Free Tier Optimierung und automatischer Kostenkontrolle.
 
-**Budget:** 10-15€/Monat | **Free Tier:** 12 Monate | **Status:** ✅ Vollständig eingerichtet
+**Budget:** 5-15€/Monat | **Free Tier:** 12 Monate 
 
 ---
 
