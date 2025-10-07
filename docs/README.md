@@ -59,19 +59,27 @@ Dieses Projekt dokumentiert die komplette Einrichtung einer **FREE-TIER(soweit m
 ./scripts/test-iam-permissions.sh
 ```
 
-### **Schritt 2: Free Tier Monitoring**
+### **Schritt 2: Budget Automation Setup**
 ```bash
-# 1. Budget Alerts konfigurieren
-# 2. Cost Explorer aktivieren
-# 3. Free Tier Dashboard prüfen
-./scripts/cost-management.sh analyze
+# 1. Budget-Infrastructure deployen
+ALERT_EMAIL=deine@email.de ./scripts/budget-automation/deploy-infrastructure.sh deploy
+
+# 2. Aktuellen Kostenstatus prüfen
+./scripts/budget-automation/cost-monitor.sh monitor
+
+# 3. Ungenutzte Ressourcen scannen
+./scripts/budget-automation/unused-resource-cleanup.sh scan
 ```
 
 ### **Schritt 3: Erstes Projekt**
 ```bash
-# Single EC2 mit Multi-Language Setup
-cd projects/01-ec2-hello/
-# Kosten: ~0-5€/Monat
+# Serverless Todo-App (Free Tier optimiert)
+cd projects/01-serverless-todo-app/
+# Kosten: ~0-2€/Monat
+
+# Oder: Static Website mit CI/CD
+cd projects/02-static-website-cicd/
+# Kosten: ~0-1€/Monat
 ```
 
 ---
@@ -104,31 +112,37 @@ cd projects/01-ec2-hello/
 
 ## 🛠️ **Verfügbare Tools**
 
-### **Cost Management Scripts:**
+### **Budget Automation Scripts:**
 ```bash
-# Kosten-Analyse mit Prognose
-./scripts/cost-management.sh analyze
+# Vollständiger Kostenbericht mit Prognose
+./scripts/budget-automation/cost-monitor.sh monitor
 
-# Live-Monitoring
-./scripts/cost-management.sh monitor
+# Nur Budget-Status prüfen
+./scripts/budget-automation/cost-monitor.sh budget
 
-# Notfall-Shutdown
-./scripts/cost-management.sh emergency
+# Monatsende-Prognose
+./scripts/budget-automation/cost-monitor.sh forecast
 ```
 
-### **IAM Permission Testing:**
+### **Ressourcen-Bereinigung:**
 ```bash
-# Alle 38 AWS-Berechtigungen testen
-./scripts/test-iam-permissions.sh
+# Ungenutzte Ressourcen scannen (sicher)
+./scripts/budget-automation/unused-resource-cleanup.sh scan
+
+# Tatsächliche Bereinigung (VORSICHT!)
+DRY_RUN=false ./scripts/budget-automation/unused-resource-cleanup.sh cleanup
 ```
 
-### **Service Management:**
+### **Infrastructure Management:**
 ```bash
-# Services für Demo starten
-./scripts/cost-management.sh start
+# Budget-Automation Infrastructure deployen
+ALERT_EMAIL=deine@email.de ./scripts/budget-automation/deploy-infrastructure.sh deploy
 
-# Services stoppen (Kosten sparen)
-./scripts/cost-management.sh stop
+# Stack Status prüfen
+./scripts/budget-automation/deploy-infrastructure.sh status
+
+# Stack löschen
+./scripts/budget-automation/deploy-infrastructure.sh delete
 ```
 
 ---
@@ -172,6 +186,42 @@ cd projects/01-ec2-hello/
 
 ---
 
+## 🛠️ **Verfügbare Scripts & Tools**
+
+### **Scripts Struktur:**
+```
+scripts/
+├── budget-automation/           # Hauptverzeichnis für Budget-Tools
+│   ├── cost-monitor.sh           # Kostenmonitoring & Reports
+│   ├── deploy-infrastructure.sh  # CloudFormation Deployment
+│   ├── unused-resource-cleanup.sh # Ressourcen-Bereinigung
+│   └── budget-automation-infrastructure.yaml  # CloudFormation Template
+├── lambda-functions/           # Lambda-Funktionen für Automation
+│   ├── budget-shutdown-handler.py # Automatische Ressourcen-Abschaltung
+│   ├── resource-scheduler.py      # Tag-basierte Zeitplanung
+│   └── s3-lifecycle-optimizer.py  # S3-Kostenoptimierung
+└── monitoring/                 # Monitoring Scripts
+    ├── free-tier-monitor.py      # Free Tier Überwachung
+    └── cost-management.sh        # Legacy Kostenmanagement
+```
+
+### **Wichtige Features:**
+- **✅ Vollautomatische Budget-Überwachung** mit E-Mail-Alerts
+- **✅ CloudFormation-basierte Infrastructure** (reproduzierbar)
+- **✅ Lambda-Funktionen** für kontinuierliche Optimierung
+- **✅ Tag-basierte Ressourcen-Planung** (AutoSchedule Tag)
+- **✅ S3 Lifecycle-Optimierung** (Standard → IA → Glacier)
+- **✅ Ungenutzte Ressourcen-Erkennung** mit Kostenschätzung
+- **✅ Multi-Level Budget Alerts** (50%, 80%, 100%)
+- **✅ CloudWatch Dashboard** für Monitoring
+
+### **Script-Fehler die behoben wurden:**
+1. ✅ **resource-scheduler.py erstellt** - War in deploy-infrastructure.sh referenziert aber fehlte
+2. ✅ **Falsche Pfade korrigiert** - cost-management.sh → cost-monitor.sh
+3. ✅ **Nicht-existente Scripts entfernt** - test-iam-permissions.sh Referenzen
+4. ✅ **Korrekte Verwendungsbeispiele** - Alle Pfade auf tatsächlich existierende Scripts aktualisiert
+5. ✅ **CloudFormation Template validiert** - Alle Lambda-Referenzen stimmen überein
+
 ## 🔒 **Security & Best Practices**
 
 ### **Account Security:**
@@ -196,21 +246,49 @@ cd projects/01-ec2-hello/
 
 ## 📞 **Support & Troubleshooting**
 
-### **Häufige Probleme:**
+### **Häufige Script-Probleme:**
+1. **AWS CLI nicht konfiguriert:**
+   ```bash
+   aws configure
+   # oder AWS-Credentials als Umgebungsvariablen setzen
+   ```
+
+2. **Budget-Infrastructure Deployment Fehler:**
+   ```bash
+   # E-Mail-Adresse muss gültig sein
+   ALERT_EMAIL=valid@email.com ./scripts/budget-automation/deploy-infrastructure.sh deploy
+   
+   # Für Updates bestehender Stack
+   ./scripts/budget-automation/deploy-infrastructure.sh update
+   ```
+
+3. **Berechtigungsfehler bei Scripts:**
+   ```bash
+   # Script ausführbar machen
+   chmod +x ./scripts/budget-automation/*.sh
+   
+   # AWS-Berechtigungen prüfen
+   aws sts get-caller-identity
+   ```
+
+### **Ursprüngliche Probleme:**
 1. **Free Tier überschritten** → [Monitoring Guide](02-free-tier/monitoring-guide.md)
 2. **IAM Permission Fehler** → [IAM Setup](01-setup/iam-setup.md)
 3. **Unerwartete Kosten** → [Cost Analysis](03-cost-analysis/cost-explorer-analysis.md)
 
 ### **Logs & Debugging:**
 ```bash
-# AWS CLI Debug Mode
-aws --debug <command>
+# Budget Status prüfen
+./scripts/budget-automation/cost-monitor.sh budget
 
-# CloudWatch Logs prüfen
-aws logs describe-log-groups
+# CloudWatch Dashboard URL abrufen
+aws cloudformation describe-stacks --stack-name aws-budget-automation --query 'Stacks[0].Outputs'
+
+# Lambda Logs prüfen
+aws logs tail /aws/lambda/aws-budget-automation-budget-shutdown
 
 # Cost & Usage Report
-aws ce get-cost-and-usage --time-period Start=2024-01-01,End=2024-01-02
+aws ce get-cost-and-usage --time-period Start=2025-01-01,End=2025-01-02 --granularity MONTHLY --metrics BlendedCost
 ```
 
 ---
@@ -218,9 +296,12 @@ aws ce get-cost-and-usage --time-period Start=2024-01-01,End=2024-01-02
 ## 🎯 **Nächste Schritte**
 
 1. **📖 Setup starten:** [Account Setup Guide](01-setup/account-setup.md)
-2. **💰 Budget konfigurieren:** [Budget Management](03-cost-analysis/budget-management.md)  
-3. **🚀 Erstes Projekt:** [EC2 Hello World](04-projects/01-serverless-api.md)
-4. **📊 Monitoring:** [Free Tier Dashboard](02-free-tier/monitoring-guide.md)
+2. **💰 Budget-Automation deployen:** 
+   ```bash
+   ALERT_EMAIL=deine@email.de ./scripts/budget-automation/deploy-infrastructure.sh deploy
+   ```
+3. **🚀 Erstes Projekt:** [Serverless Todo App](../projects/01-serverless-todo-app/README.md)
+4. **📊 Monitoring:** [Budget Automation Guide](05-budget-automation/README.md)
 
 ---
 
