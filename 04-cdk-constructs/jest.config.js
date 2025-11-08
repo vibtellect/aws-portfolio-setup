@@ -16,6 +16,7 @@ module.exports = {
     '!**/dist/**',
     '!**/examples/**',
     '!**/*.d.ts',
+    '!**/.construct-template/**',
   ],
 
   coverageThreshold: {
@@ -66,26 +67,9 @@ module.exports = {
   resetMocks: false,
   restoreMocks: true,
 
-  // Globals (CDK specific)
-  globals: {
-    'ts-jest': {
-      isolatedModules: true, // Faster compilation
-    },
-  },
-
   // Setup files
   // setupFilesAfterEnv: ['<rootDir>/test-setup.js'],
 
   // Display individual test results
-  reporters: [
-    'default',
-    ['jest-junit', {
-      outputDirectory: 'coverage',
-      outputName: 'junit.xml',
-      classNameTemplate: '{classname}',
-      titleTemplate: '{title}',
-      ancestorSeparator: ' › ',
-      usePathForSuiteName: true,
-    }],
-  ],
+  reporters: ['default'],
 };
