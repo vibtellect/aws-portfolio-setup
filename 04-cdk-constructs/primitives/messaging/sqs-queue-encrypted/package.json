@@ -1,0 +1,50 @@
+{
+  "name": "@aws-constructs/primitives-sqs-queue-encrypted",
+  "version": "1.0.0",
+  "description": "SQS Queue with SSE-KMS encryption and optional DLQ",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:tdd": "jest --watch --verbose --coverage=false",
+    "test:coverage": "jest --coverage",
+    "test:ci": "jest --ci --coverage"
+  },
+  "keywords": [
+    "aws",
+    "cdk",
+    "constructs",
+    "primitives",
+    "messaging",
+    "sqs",
+    "encryption"
+  ],
+  "author": "Vitalij",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vibtellect/aws-portfolio-setup.git",
+    "directory": "04-cdk-constructs/primitives/messaging/sqs-queue-encrypted"
+  },
+  "peerDependencies": {
+    "aws-cdk-lib": "^2.120.0",
+    "constructs": "^10.0.0"
+  },
+  "devDependencies": {
+    "@jest/globals": "^30.2.0",
+    "@types/jest": "^29.5.0",
+    "@types/node": "^18.0.0",
+    "aws-cdk-lib": "^2.120.0",
+    "constructs": "^10.0.0",
+    "jest": "^29.5.0",
+    "ts-jest": "^29.1.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {},
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

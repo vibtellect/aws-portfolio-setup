@@ -1,7 +1,7 @@
 # CDK Constructs Library – Test-Driven Development
 
 > **Version:** 2.0.0 | **TDD-Ready** | **Status:** Active Development
-> **Coverage:** 100% | **Tests:** 43 passing | **Constructs:** 3/13 implemented
+> **Coverage:** 100% | **Tests:** 73 passing | **Constructs:** 5/13 implemented
 
 Enterprise-grade AWS CDK Constructs entwickelt mit **Test-Driven Development** (TDD). Sichere Defaults, Kostenoptimierung, 100% Test Coverage.
 
@@ -29,18 +29,15 @@ npm run test:tdd
 
 ## 📊 Implementation Status
 
-### ✅ Implementiert (3/13)
+### ✅ Implementiert (5/13)
 
 | Construct | Domain | Tests | Coverage | Status |
 |-----------|--------|-------|----------|--------|
 | `log-group-short-retention` | observability | 11 | 100% | ✅ Prod-Ready |
 | `iam-role-lambda-basic` | security | 13 | 100% | ✅ Prod-Ready |
 | `kms-key-managed` | security | 19 | 100% | ✅ Prod-Ready |
-
-### 🔄 In Progress (2/13)
-
-- `sqs-queue-encrypted` (messaging)
-- `sns-topic-encrypted` (messaging)
+| `sqs-queue-encrypted` | messaging | 17 | 100% | ✅ Prod-Ready |
+| `sns-topic-encrypted` | messaging | 13 | 100% | ✅ Prod-Ready |
 
 ### ⏳ Planned (8/13)
 
@@ -48,7 +45,7 @@ npm run test:tdd
 - `lambda-function-secure` (compute)
 - `network-baseline` (networking)
 - `dynamodb-table-standard` (database)
-- 4 weitere patterns...
+- 4 Patterns (api, async, web, data)
 
 **Detaillierter Status:** [IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md)
 
@@ -211,6 +208,64 @@ const key = new KmsKeyManaged(this, 'EncryptionKey', {
 
 ---
 
+### 4. sqs-queue-encrypted (messaging)
+
+SQS Queue mit KMS-Verschlüsselung und optionalem Dead-Letter Queue.
+
+```typescript
+import { SqsQueueEncrypted } from './primitives/messaging/sqs-queue-encrypted/src';
+
+const queue = new SqsQueueEncrypted(this, 'MyQueue', {
+  kmsKey: kmsKey, // Optional: custom KMS key
+  enableDeadLetterQueue: true, // Optional: DLQ
+  messageRetentionPeriod: cdk.Duration.days(7), // Optional: retention
+  visibilityTimeout: cdk.Duration.seconds(30), // Optional: visibility
+});
+```
+
+**Features:**
+- ✅ SQS Queue mit AWS managed KMS Verschlüsselung (Standard)
+- ✅ Optional Custom KMS Key Support
+- ✅ Dead-Letter Queue Support (mit automatischer DLQ-Erstellung)
+- ✅ Konfigurierbare Message Retention Periode
+- ✅ Konfigurierbare Visibility Timeout
+- ✅ Least-Privilege IAM Policies
+- ✅ Environment-aware RemovalPolicy (dev=DESTROY, prod=RETAIN)
+- ✅ 17 Tests, 100% Coverage
+
+**Location:** `primitives/messaging/sqs-queue-encrypted/`
+
+---
+
+### 5. sns-topic-encrypted (messaging)
+
+SNS Topic mit KMS-Verschlüsselung und Subscription Management.
+
+```typescript
+import { SnsTopicEncrypted } from './primitives/messaging/sns-topic-encrypted/src';
+
+const topic = new SnsTopicEncrypted(this, 'MyTopic', {
+  displayName: 'My Topic', // Optional: display name
+  kmsKey: kmsKey, // Optional: custom KMS key
+  fifo: false, // Optional: FIFO mode
+  contentBasedDeduplication: false, // Optional: for FIFO
+});
+```
+
+**Features:**
+- ✅ SNS Topic mit AWS managed KMS Verschlüsselung (Standard)
+- ✅ Optional Custom KMS Key Support
+- ✅ FIFO Topic Support (Standard + FIFO Variants)
+- ✅ Content-based Deduplication für FIFO Topics
+- ✅ Display Name Unterstützung
+- ✅ Environment-aware RemovalPolicy (dev=DESTROY, prod=RETAIN)
+- ✅ Subscription-ready (output für ARN)
+- ✅ 13 Tests, 100% Coverage
+
+**Location:** `primitives/messaging/sns-topic-encrypted/`
+
+---
+
 ## 🚀 Neues Construct erstellen
 
 ### Automatisches Scaffolding
@@ -304,10 +359,10 @@ npm run test:tdd
 ## 📊 Statistiken
 
 ```
-Constructs implementiert:     3/13 (23%)
-Tests gesamt:                 43 tests
+Constructs implementiert:     5/13 (38%)
+Tests gesamt:                 73 tests
 Coverage:                     100%
-Lines of Code:                ~1,550 LOC
+Lines of Code:                ~2,500 LOC
 Zeit pro Construct:           ~2-3 Stunden (mit TDD)
 ```
 

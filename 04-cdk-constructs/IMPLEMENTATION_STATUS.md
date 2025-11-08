@@ -3,7 +3,7 @@
 > **Live-Dokument** – Wird bei jedem Fortschritt aktualisiert
 > **Letzte Aktualisierung:** 2025-01-08
 > **Phase:** 2 (Implementation mit TDD)
-> **Overall Progress:** 23.1% (3/13 Constructs fertig)
+> **Overall Progress:** 38.5% (5/13 Constructs fertig)
 
 ---
 
@@ -11,17 +11,17 @@
 
 | Kategorie | Total | ✅ Fertig | 🟡 In Progress | 🔴 Geplant |
 |-----------|-------|-----------|----------------|------------|
-| **Primitives** | 7 | 3 | 0 | 4 |
+| **Primitives** | 7 | 5 | 0 | 2 |
 | **Patterns** | 6 | 0 | 0 | 6 |
-| **GESAMT** | 13 | 3 | 0 | 10 |
+| **GESAMT** | 13 | 5 | 0 | 8 |
 
 ### Completion Metrics
 
 ```
-Implementierung (src/):         ██████░░░░░░░░░░░░░░░░░░  23% (3/13)
-Tests (test/):                  ██████░░░░░░░░░░░░░░░░░░  23% (3/13)
-Coverage:                       ████████████████████████ 100% (3/3)
-Dokumentation (README.md):      ██████░░░░░░░░░░░░░░░░░░  23% (3/13)
+Implementierung (src/):         █████████████░░░░░░░░░░░░  38% (5/13)
+Tests (test/):                  █████████████░░░░░░░░░░░░  38% (5/13)
+Coverage:                       ████████████████████████ 100% (5/5)
+Dokumentation (README.md):      █████████████░░░░░░░░░░░░  38% (5/13)
 Beispiele (examples/):          ░░░░░░░░░░░░░░░░░░░░░░░░   0% (0/13)
 CHANGELOG.md:                   ░░░░░░░░░░░░░░░░░░░░░░░░   0% (0/13)
 ```
@@ -29,16 +29,16 @@ CHANGELOG.md:                   ░░░░░░░░░░░░░░░░
 ### Test Statistics
 
 ```
-Total Tests:                    43 tests
-Passing Tests:                  43 (100%)
+Total Tests:                    73 tests
+Passing Tests:                  73 (100%)
 Failing Tests:                  0
 Average Coverage:               100%
-Total Lines Tested:             ~800 LOC
+Total Lines Tested:             ~1,300 LOC
 ```
 
 ---
 
-## ✅ Completed Constructs (3/13)
+## ✅ Completed Constructs (5/13)
 
 ### 1. primitives/observability/log-group-short-retention
 
@@ -195,23 +195,119 @@ readonly keyId: string;
 
 ---
 
-## 🔄 Planned Constructs (10/13)
+### 4. primitives/messaging/sqs-queue-encrypted
 
-### Priority 1: Security & Messaging (2 Constructs)
+**Status:** ✅ **100% Complete** – Production-Ready
 
-#### 4. primitives/messaging/sqs-queue-encrypted
-- **Status:** 🔴 Geplant
-- **Priorität:** Hoch
-- **Geschätzte Zeit:** 2-3h
-- **Features:** SQS Queue mit SSE-KMS, DLQ optional, Message Retention
+**Implementiert:** 2025-01-08
 
-#### 5. primitives/messaging/sns-topic-encrypted
-- **Status:** 🔴 Geplant
-- **Priorität:** Hoch
-- **Geschätzte Zeit:** 2-3h
-- **Features:** SNS Topic mit SSE-KMS, Subscriptions
+**Features:**
+- SQS Queue mit AWS managed KMS Verschlüsselung (Standard)
+- Optional Custom KMS Key Support
+- Dead-Letter Queue Support (mit automatischer DLQ-Erstellung)
+- Konfigurierbare Message Retention Periode
+- Konfigurierbare Visibility Timeout
+- Least-Privilege IAM Policies
+- Environment-aware RemovalPolicy (dev=DESTROY, prod=RETAIN)
 
-### Priority 2: Storage & Compute (2 Constructs)
+**Tests:** 17 Tests, 100% Coverage
+- ✅ Creates SQS queue with default encryption
+- ✅ Uses AWS managed KMS key by default
+- ✅ Allows custom KMS key when provided
+- ✅ Creates dead-letter queue when enabled
+- ✅ Does not create dead-letter queue by default
+- ✅ Sets message retention period when provided
+- ✅ Sets visibility timeout when provided
+- ✅ Provides queue URL and queue ARN outputs
+- ✅ Uses DESTROY removal policy for dev stacks
+- ✅ Uses RETAIN removal policy for production stacks
+- ✅ Allows custom removal policy
+- ✅ Supports queue name override
+- ✅ Validates queue name length
+- ✅ Throws error for invalid queue configuration
+- ✅ Applies managed-by and construct tags
+- ✅ DLQ inherits encryption settings from main queue
+- ✅ Allows access policies for message producers
+
+**Props:**
+```typescript
+interface SqsQueueEncryptedProps {
+  queueName?: string;
+  kmsKey?: kms.IKey;                                    // Default: AWS managed
+  enableDeadLetterQueue?: boolean;                      // Default: false
+  messageRetentionPeriod?: cdk.Duration;                // Default: 4 days
+  visibilityTimeout?: cdk.Duration;                     // Default: 30 seconds
+  removalPolicy?: cdk.RemovalPolicy;                    // Default: Auto-detect
+}
+```
+
+**Outputs:**
+```typescript
+readonly queue: sqs.Queue;
+readonly queueUrl: string;
+readonly queueArn: string;
+readonly deadLetterQueue?: sqs.Queue;
+```
+
+**Lines of Code:** ~320 (src) + ~280 (tests)
+
+---
+
+### 5. primitives/messaging/sns-topic-encrypted
+
+**Status:** ✅ **100% Complete** – Production-Ready
+
+**Implementiert:** 2025-01-08
+
+**Features:**
+- SNS Topic mit AWS managed KMS Verschlüsselung (Standard)
+- Optional Custom KMS Key Support
+- FIFO Topic Support (Standard + FIFO Variants)
+- Content-based Deduplication für FIFO Topics
+- Display Name Unterstützung
+- Environment-aware RemovalPolicy (dev=DESTROY, prod=RETAIN)
+- Subscription-ready (output für ARN)
+
+**Tests:** 13 Tests, 100% Coverage
+- ✅ Creates SNS topic with default encryption
+- ✅ Uses AWS managed KMS key by default
+- ✅ Allows custom KMS key when provided
+- ✅ Creates standard topic by default
+- ✅ Creates FIFO topic when enabled
+- ✅ Enables content deduplication for FIFO topics
+- ✅ Sets display name when provided
+- ✅ Provides topic ARN and topic name outputs
+- ✅ Uses DESTROY removal policy for dev stacks
+- ✅ Uses RETAIN removal policy for production stacks
+- ✅ Allows custom removal policy
+- ✅ Applies managed-by and construct tags
+- ✅ FIFO topics have .fifo suffix in name
+
+**Props:**
+```typescript
+interface SnsTopicEncryptedProps {
+  displayName?: string;
+  kmsKey?: kms.IKey;                                    // Default: AWS managed
+  fifo?: boolean;                                       // Default: false
+  contentBasedDeduplication?: boolean;                  // Default: false (for FIFO)
+  removalPolicy?: cdk.RemovalPolicy;                    // Default: Auto-detect
+}
+```
+
+**Outputs:**
+```typescript
+readonly topic: sns.Topic;
+readonly topicArn: string;
+readonly topicName: string;
+```
+
+**Lines of Code:** ~240 (src) + ~210 (tests)
+
+---
+
+## 🔄 Planned Constructs (8/13)
+
+### Priority 1: Storage & Compute (2 Constructs)
 
 #### 6. primitives/storage/s3-bucket-secure
 - **Status:** 🔴 Geplant
@@ -221,38 +317,42 @@ readonly keyId: string;
 
 #### 7. primitives/compute/lambda-function-secure
 - **Status:** 🔴 Geplant
-- **Priorität:** Mittel
+- **Priorität:** Hoch
 - **Geschätzte Zeit:** 3-4h
 - **Features:** Lambda Function mit IAM Role Integration, Logs, X-Ray
 
-### Priority 3: Database & Networking (2 Constructs)
+### Priority 2: Database & Networking (2 Constructs)
 
 #### 8. primitives/database/dynamodb-table-standard
 - **Status:** 🔴 Geplant
-- **Priorität:** Niedrig
+- **Priorität:** Mittel
 - **Geschätzte Zeit:** 2-3h
 
 #### 9. primitives/networking/network-baseline
 - **Status:** 🔴 Geplant
-- **Priorität:** Niedrig
+- **Priorität:** Mittel
 - **Geschätzte Zeit:** 3-4h
 
-### Patterns (6 Constructs)
+### Priority 3: Patterns (6 Constructs)
 
 #### 10. patterns/api/http-api-lambda
 - **Status:** 🔴 Geplant
+- **Priorität:** Niedrig
 - **Geschätzte Zeit:** 4-6h
 
 #### 11. patterns/async/queue-worker
 - **Status:** 🔴 Geplant
+- **Priorität:** Niedrig
 - **Geschätzte Zeit:** 4-6h
 
 #### 12. patterns/web/static-site-cloudfront
 - **Status:** 🔴 Geplant
+- **Priorität:** Niedrig
 - **Geschätzte Zeit:** 4-6h
 
 #### 13. patterns/data/dynamodb-table-streams
 - **Status:** 🔴 Geplant
+- **Priorität:** Niedrig
 - **Geschätzte Zeit:** 4-6h
 
 ---
@@ -286,6 +386,8 @@ Ein Construct gilt als "fertig" wenn:
 - ✅ **log-group-short-retention** implementiert (11 Tests, 100% Coverage)
 - ✅ **iam-role-lambda-basic** implementiert (13 Tests, 100% Coverage)
 - ✅ **kms-key-managed** implementiert (19 Tests, 100% Coverage)
+- ✅ **sqs-queue-encrypted** implementiert (17 Tests, 100% Coverage)
+- ✅ **sns-topic-encrypted** implementiert (13 Tests, 100% Coverage)
 - ✅ Dokumentation aufgeräumt (README.md, IMPLEMENTATION_STATUS.md)
 
 ### 2025-01-07
@@ -295,10 +397,10 @@ Ein Construct gilt als "fertig" wenn:
 - ✅ TDD_GUIDE.md geschrieben
 
 ### Next Steps (geplant)
-- 🔄 **sqs-queue-encrypted** implementieren (Priority 1)
-- 🔄 **sns-topic-encrypted** implementieren (Priority 1)
-- 🔄 **s3-bucket-secure** implementieren (Priority 2)
-- 🔄 **lambda-function-secure** implementieren (Priority 2)
+- 🔄 **s3-bucket-secure** implementieren (Priority 1)
+- 🔄 **lambda-function-secure** implementieren (Priority 1)
+- 🔄 **dynamodb-table-standard** implementieren (Priority 2)
+- 🔄 **network-baseline** implementieren (Priority 2)
 - 🔄 Erste Pattern implementieren (http-api-lambda)
 - 🔄 CI/CD Pipeline testen mit GitHub Actions
 
