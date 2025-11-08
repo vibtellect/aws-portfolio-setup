@@ -1,0 +1,61 @@
+{
+  "compilerOptions": {
+    // Target & Module
+    "target": "ES2020",
+    "module": "commonjs",
+    "lib": ["ES2020"],
+
+    // Strict Type Checking (wichtig für TDD!)
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "noImplicitThis": true,
+    "alwaysStrict": true,
+
+    // Additional Checks
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+
+    // Module Resolution
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+
+    // Output
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "outDir": "./dist",
+    "rootDir": "./",
+
+    // Others
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+
+    // Incremental Compilation (schneller für TDD)
+    "incremental": true,
+    "composite": true
+  },
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/examples/**",
+    "coverage"
+  ],
+  "include": [
+    "primitives/*/*/src/**/*",
+    "patterns/*/*/src/**/*"
+  ]
+}

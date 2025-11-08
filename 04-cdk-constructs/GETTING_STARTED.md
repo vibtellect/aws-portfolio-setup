@@ -1,9 +1,45 @@
-# Getting Started: Deine ersten 5 CDK Constructs
+# Getting Started: Deine ersten 5 CDK Constructs (mit TDD)
 
-> **Für:** Menschen, nicht LLMs 😊  
-> **Ziel:** Die 5 wichtigsten Basis-Constructs verstehen und implementieren  
-> **Zeit:** ~2-3 Stunden pro Construct  
+> **Für:** Menschen, nicht LLMs 😊
+> **Ziel:** Die 5 wichtigsten Basis-Constructs verstehen und mit TDD implementieren
+> **Methode:** Test-Driven Development (RED → GREEN → REFACTOR)
+> **Zeit:** ~2-3 Stunden pro Construct
 > **Vorwissen:** Grundkenntnisse in TypeScript und AWS
+
+---
+
+## 🚨 **NEU: Test-Driven Development (TDD)**
+
+**Ab sofort entwickeln wir alle Constructs mit TDD!**
+
+### Was bedeutet das?
+
+1. **Tests ZUERST schreiben** (bevor der Code existiert)
+2. **RED → GREEN → REFACTOR** Zyklus einhalten
+3. **Watch Mode** verwenden für sofortiges Feedback
+
+### Quick Start mit TDD
+
+```bash
+# 1. Neues Construct erstellen (automatisch mit TDD-Setup)
+cd 04-cdk-constructs
+npm run scaffold primitives observability log-group-short-retention
+
+# 2. TDD Watch Mode starten
+cd primitives/observability/log-group-short-retention
+npm run test:tdd
+
+# 3. In anderem Terminal: Editor öffnen
+vim test/unit.test.ts  # Test schreiben (RED)
+vim src/index.ts       # Code implementieren (GREEN)
+# Repeat: RED → GREEN → REFACTOR
+```
+
+### Detaillierter TDD Guide
+
+📖 **[Vollständiger TDD Guide](./TDD_GUIDE.md)** - Schritt-für-Schritt Anleitung mit Beispielen
+
+---
 
 ## 🎯 Warum diese 5 Constructs zuerst?
 
@@ -11,14 +47,14 @@ Diese 5 Constructs sind die **Grundbausteine** für fast jede AWS-Anwendung:
 
 1. **log-group-short-retention** - Jede Anwendung braucht Logs
 2. **iam-role-lambda-basic** - Jede Lambda-Funktion braucht Berechtigungen
-3. **s3-bucket-secure** - Speicher ist fundamental
+3. **kms-key-managed** - Verschlüsselung für Security & Compliance
 4. **sqs-queue-encrypted** - Warteschlangen für asynchrone Verarbeitung
 5. **sns-topic-encrypted** - Notifications und Event-Routing
 
 **Warum diese Reihenfolge?**
 - Von einfach zu komplex
 - Jedes baut Wissen für das nächste auf
-- Keine Abhängigkeiten untereinander (können parallel entwickelt werden)
+- Security-First Ansatz (Logs → IAM → Encryption → Messaging)
 
 ---
 
@@ -1058,36 +1094,30 @@ describe('IamRoleLambdaBasic', () => {
 
 ---
 
-## 💾 Construct #3-5: Schnellübersicht
+## 🔐 Construct #3-5: Schnellübersicht
 
 Da du jetzt die Grundlagen verstanden hast, gebe ich dir für die nächsten 3 Constructs eine schnellere Übersicht mit den wichtigsten Punkten:
 
-### Construct #3: s3-bucket-secure
+### Construct #3: kms-key-managed
 
-**Schwierigkeitsgrad:** Mittel  
-**Neue Konzepte:** Bucket Policies, Block Public Access, Bucket Encryption
+**Schwierigkeitsgrad:** Mittel
+**Neue Konzepte:** KMS Encryption, Key Rotation, Service-specific Access
 
 **Kernlogik:**
 ```typescript
-// Block Public Access (ALLE 4 Optionen!)
-blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+const key = new kms.Key(this, 'Key', {
+  enableKeyRotation: true,  // Security Best Practice
+  description: props.description,
+  alias: props.alias,
+});
 
-// Encryption
-encryption: s3.BucketEncryption.S3_MANAGED,
-
-// HTTPS-Only Policy
-bucket.addToResourcePolicy(new iam.PolicyStatement({
-  effect: iam.Effect.DENY,
-  principals: [new iam.AnyPrincipal()],
-  actions: ['s3:*'],
-  resources: [bucket.arnForObjects('*')],
-  conditions: {
-    Bool: { 'aws:SecureTransport': 'false' },
-  },
-}));
+// Optional: Service-specific access
+if (props.enableLambdaAccess) {
+  key.grantEncryptDecrypt(new iam.ServicePrincipal('lambda.amazonaws.com'));
+}
 ```
 
-**Besonderheit:** Bucket Policy für HTTPS-Enforcement
+**Besonderheit:** Automatic key rotation + flexible service access policies
 
 ### Construct #4: sqs-queue-encrypted
 
@@ -1144,7 +1174,7 @@ public addEmailSubscription(email: string): void {
 ### Woche 1: Basis-Constructs
 - [ ] Tag 1-2: log-group-short-retention (einfach)
 - [ ] Tag 3-4: iam-role-lambda-basic (mittel)
-- [ ] Tag 5: s3-bucket-secure (mittel)
+- [ ] Tag 5: kms-key-managed (mittel)
 
 ### Woche 2: Messaging
 - [ ] Tag 1-2: sqs-queue-encrypted

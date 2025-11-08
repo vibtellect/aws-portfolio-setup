@@ -1,0 +1,51 @@
+name: CDK Constructs Tests
+
+on:
+  push:
+    branches: [ main, develop, 'claude/**' ]
+    paths:
+      - '04-cdk-constructs/**'
+      - '.github/workflows/cdk-constructs-test.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - '04-cdk-constructs/**'
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Test CDK Constructs
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+
+      - name: Install dependencies
+        working-directory: ./04-cdk-constructs
+        run: npm install
+
+      - name: Run tests with coverage
+        working-directory: ./04-cdk-constructs
+        run: npm run test:ci
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        if: always()
+        with:
+          directory: ./04-cdk-constructs/coverage
+          flags: cdk-constructs
+          fail_ci_if_error: false
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: 04-cdk-constructs/coverage/
+          retention-days: 7

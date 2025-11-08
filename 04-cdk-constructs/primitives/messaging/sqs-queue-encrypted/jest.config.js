@@ -4,7 +4,12 @@ module.exports = {
   roots: ['<rootDir>/test'],
   testMatch: ['**/*.test.ts'],
   transform: {
-    '^.+\\.tsx?$': 'ts-jest'
+    '^.+\\.tsx?$': ['ts-jest', {
+      tsconfig: {
+        strict: true,
+        types: ['jest', 'node']
+      }
+    }]
   },
   collectCoverageFrom: [
     'src/**/*.{js,ts}',
@@ -38,13 +43,5 @@ module.exports = {
     '/node_modules/',
     '/lib/',
     '/cdk.out/',
-  ],
-
-  globals: {
-    'ts-jest': {
-      tsconfig: {
-        strict: true
-      }
-    }
-  }
+  ]
 };
