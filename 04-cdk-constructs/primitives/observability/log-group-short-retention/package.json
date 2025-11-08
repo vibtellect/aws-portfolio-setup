@@ -1,7 +1,7 @@
 {
-  "name": "@aws-constructs/{category}-{construct-name}",
+  "name": "@aws-constructs/primitives-log-group-short-retention",
   "version": "1.0.0",
-  "description": "{Kurze Beschreibung des Constructs}",
+  "description": "CloudWatch Log Group with short retention period for cost optimization",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "scripts": {
@@ -25,26 +25,28 @@
     "aws",
     "cdk",
     "constructs",
-    "{category}",
-    "{domain}",
+    "primitives",
+    "observability",
     "infrastructure-as-code",
-    "iac"
+    "iac",
+    "cloudwatch",
+    "logs"
   ],
-  "author": "{Your Name}",
+  "author": "Vitalij",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/{org}/aws-portfolio-setup.git",
-    "directory": "04-cdk-constructs/{category}/{domain}/{construct-name}"
+    "url": "https://github.com/vibtellect/aws-portfolio-setup.git",
+    "directory": "04-cdk-constructs/primitives/observability/log-group-short-retention"
   },
   "peerDependencies": {
     "aws-cdk-lib": "^2.120.0",
     "constructs": "^10.0.0"
   },
   "devDependencies": {
-    "@jest/globals": "^29.7.0",
-    "@types/jest": "^29.5.0",
-    "@types/node": "^18.0.0",
+    "@jest/globals": "^30.2.0",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^18.19.130",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
     "aws-cdk": "^2.120.0",
@@ -56,26 +58,6 @@
     "ts-jest": "^29.1.0",
     "ts-node": "^10.9.0",
     "typescript": "^5.0.0"
-  },
-  "dependencies": {},
-  "jest": {
-    "preset": "ts-jest",
-    "testEnvironment": "node",
-    "testMatch": [
-      "**/*.test.ts"
-    ],
-    "collectCoverageFrom": [
-      "src/**/*.ts",
-      "!src/**/*.d.ts"
-    ],
-    "coverageThreshold": {
-      "global": {
-        "branches": 80,
-        "functions": 80,
-        "lines": 80,
-        "statements": 80
-      }
-    }
   },
   "engines": {
     "node": ">=18.0.0"
