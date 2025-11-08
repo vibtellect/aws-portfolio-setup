@@ -28,7 +28,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: ./04-cdk-constructs
-        run: npm ci
+        run: npm install
 
       - name: Run tests with coverage
         working-directory: ./04-cdk-constructs
