@@ -130,7 +130,7 @@ export class LogGroupShortRetention extends Construct {
     this.logGroup = new logs.LogGroup(this, 'LogGroup', {
       logGroupName: props.logGroupName,
       retention: retentionDays,
-      encryptionKey: props.kmsKeyArn ? undefined : undefined, // KMS Key würde als IKey benötigt
+      // encryptionKey requires IKey, not ARN; KMS is set via CFN override below if needed
       removalPolicy: removalPolicy,
     });
 
@@ -168,6 +168,10 @@ export class LogGroupShortRetention extends Construct {
    * - Schaue auf Stack-Name
    * - dev/test/sandbox → DESTROY
    * - Alles andere → RETAIN
+   *
+   * ACHTUNG: Diese Auto-Erkennung kann zu Datenverlust führen wenn
+   * Stack-Namen nicht den Konventionen folgen. Für kritische Logs
+   * immer explizit removalPolicy setzen!
    */
   private getDefaultRemovalPolicy(): cdk.RemovalPolicy {
     const stack = cdk.Stack.of(this);

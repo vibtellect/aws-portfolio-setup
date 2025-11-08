@@ -85,7 +85,7 @@ fi
 
 # Convert construct-name to PascalCase for class name
 # e.g., lambda-function-secure → LambdaFunctionSecure
-CONSTRUCT_CLASS=$(echo "$CONSTRUCT_NAME" | sed -r 's/(^|-)([a-z])/\U\2/g')
+CONSTRUCT_CLASS=$(echo "$CONSTRUCT_NAME" | sed -E 's/(^|-)([a-z])/\U\2/g')
 
 # Paths
 CDK_CONSTRUCTS_DIR="04-cdk-constructs"
@@ -130,11 +130,13 @@ print_info "Kopiere Template-Dateien..."
 # Function to replace placeholders in file
 replace_placeholders() {
     local file=$1
-    sed -i "s/{construct-name}/$CONSTRUCT_NAME/g" "$file"
-    sed -i "s/{ConstructName}/$CONSTRUCT_CLASS/g" "$file"
-    sed -i "s/{category}/$CATEGORY/g" "$file"
-    sed -i "s/{domain}/$DOMAIN/g" "$file"
-    sed -i "s/{YYYY-MM-DD}/$(date +%Y-%m-%d)/g" "$file"
+    local temp_file="${file}.tmp"
+    sed "s/{construct-name}/$CONSTRUCT_NAME/g" "$file" | \
+    sed "s/{ConstructName}/$CONSTRUCT_CLASS/g" | \
+    sed "s/{category}/$CATEGORY/g" | \
+    sed "s/{domain}/$DOMAIN/g" | \
+    sed "s/{YYYY-MM-DD}/$(date +%Y-%m-%d)/g" > "$temp_file"
+    mv "$temp_file" "$file"
 }
 
 # Copy and process package.json
