@@ -15,7 +15,7 @@
     "lint": "eslint . --ext .ts",
     "format": "prettier --write '**/*.{ts,json,md}'",
     "validate": "npm run build && npm run test",
-    "scaffold": "node scripts/create-construct.js"
+    "scaffold": "node ../scripts/create-construct.js"
   },
   "workspaces": [
     "primitives/*/*",

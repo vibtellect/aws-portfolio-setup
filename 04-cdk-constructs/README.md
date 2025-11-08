@@ -131,8 +131,9 @@ CloudWatch Log Group mit kostenoptimierter Retention.
 
 ```typescript
 import { LogGroupShortRetention } from './primitives/observability/log-group-short-retention/src';
+import * as logs from 'aws-cdk-lib/aws-logs';
 
-const logs = new LogGroupShortRetention(this, 'MyLogs', {
+const logGroup = new LogGroupShortRetention(this, 'MyLogs', {
   retentionDays: logs.RetentionDays.TWO_WEEKS, // Default: 14 Tage
   kmsKeyArn: 'arn:aws:kms:...', // Optional: KMS Encryption
 });
