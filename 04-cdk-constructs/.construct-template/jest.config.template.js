@@ -25,6 +25,21 @@ module.exports = {
     '/lib/'
   ],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
+
+  // TDD-freundliche Einstellungen
+  verbose: true,
+  silent: false,
+  clearMocks: true,
+  resetMocks: false,
+  restoreMocks: true,
+
+  // Watch mode optimizations
+  watchPathIgnorePatterns: [
+    '/node_modules/',
+    '/lib/',
+    '/cdk.out/',
+  ],
+
   globals: {
     'ts-jest': {
       tsconfig: {

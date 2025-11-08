@@ -1,9 +1,45 @@
-# Getting Started: Deine ersten 5 CDK Constructs
+# Getting Started: Deine ersten 5 CDK Constructs (mit TDD)
 
-> **Für:** Menschen, nicht LLMs 😊  
-> **Ziel:** Die 5 wichtigsten Basis-Constructs verstehen und implementieren  
-> **Zeit:** ~2-3 Stunden pro Construct  
+> **Für:** Menschen, nicht LLMs 😊
+> **Ziel:** Die 5 wichtigsten Basis-Constructs verstehen und mit TDD implementieren
+> **Methode:** Test-Driven Development (RED → GREEN → REFACTOR)
+> **Zeit:** ~2-3 Stunden pro Construct
 > **Vorwissen:** Grundkenntnisse in TypeScript und AWS
+
+---
+
+## 🚨 **NEU: Test-Driven Development (TDD)**
+
+**Ab sofort entwickeln wir alle Constructs mit TDD!**
+
+### Was bedeutet das?
+
+1. **Tests ZUERST schreiben** (bevor der Code existiert)
+2. **RED → GREEN → REFACTOR** Zyklus einhalten
+3. **Watch Mode** verwenden für sofortiges Feedback
+
+### Quick Start mit TDD
+
+```bash
+# 1. Neues Construct erstellen (automatisch mit TDD-Setup)
+cd 04-cdk-constructs
+npm run scaffold primitives observability log-group-short-retention
+
+# 2. TDD Watch Mode starten
+cd primitives/observability/log-group-short-retention
+npm run test:tdd
+
+# 3. In anderem Terminal: Editor öffnen
+vim test/unit.test.ts  # Test schreiben (RED)
+vim src/index.ts       # Code implementieren (GREEN)
+# Repeat: RED → GREEN → REFACTOR
+```
+
+### Detaillierter TDD Guide
+
+📖 **[Vollständiger TDD Guide](./TDD_GUIDE.md)** - Schritt-für-Schritt Anleitung mit Beispielen
+
+---
 
 ## 🎯 Warum diese 5 Constructs zuerst?
 

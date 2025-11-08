@@ -1,0 +1,187 @@
+name: CDK Constructs Tests
+
+on:
+  push:
+    branches: [ main, develop, 'claude/**' ]
+    paths:
+      - '04-cdk-constructs/**'
+      - '.github/workflows/cdk-constructs-test.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - '04-cdk-constructs/**'
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Test CDK Constructs
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+      fail-fast: false
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          cache-dependency-path: '04-cdk-constructs/package-lock.json'
+
+      - name: Install root dependencies
+        working-directory: ./04-cdk-constructs
+        run: npm ci
+
+      - name: Run linter
+        working-directory: ./04-cdk-constructs
+        run: npm run lint
+        continue-on-error: true
+
+      - name: Run tests with coverage
+        working-directory: ./04-cdk-constructs
+        run: npm run test:ci
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        if: matrix.node-version == '20.x'
+        with:
+          directory: ./04-cdk-constructs/coverage
+          flags: cdk-constructs
+          fail_ci_if_error: false
+
+      - name: Generate coverage report
+        if: always()
+        working-directory: ./04-cdk-constructs
+        run: |
+          if [ -f coverage/coverage-summary.json ]; then
+            echo "## Test Coverage Summary" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo '```json' >> $GITHUB_STEP_SUMMARY
+            cat coverage/coverage-summary.json >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results-node-${{ matrix.node-version }}
+          path: |
+            04-cdk-constructs/coverage/
+            04-cdk-constructs/coverage/junit.xml
+          retention-days: 30
+
+  # Separate job um einzelne Constructs zu testen
+  test-constructs:
+    name: Test Individual Constructs
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    strategy:
+      matrix:
+        construct:
+          - primitives/storage/s3-bucket-secure
+          - primitives/security/iam-role-lambda-basic
+          - primitives/security/kms-key-managed
+          - primitives/messaging/sqs-queue-encrypted
+          - primitives/messaging/sns-topic-encrypted
+          - primitives/observability/log-group-short-retention
+          - primitives/networking/network-baseline
+      fail-fast: false
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: Check if construct exists
+        id: check
+        working-directory: ./04-cdk-constructs
+        run: |
+          if [ -d "${{ matrix.construct }}" ] && [ -f "${{ matrix.construct }}/package.json" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Install construct dependencies
+        if: steps.check.outputs.exists == 'true'
+        working-directory: ./04-cdk-constructs/${{ matrix.construct }}
+        run: npm ci
+
+      - name: Run construct tests
+        if: steps.check.outputs.exists == 'true'
+        working-directory: ./04-cdk-constructs/${{ matrix.construct }}
+        run: npm test
+
+      - name: Build construct
+        if: steps.check.outputs.exists == 'true'
+        working-directory: ./04-cdk-constructs/${{ matrix.construct }}
+        run: npm run build
+
+  # Job für Code Quality Checks
+  quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+          cache-dependency-path: '04-cdk-constructs/package-lock.json'
+
+      - name: Install dependencies
+        working-directory: ./04-cdk-constructs
+        run: npm ci
+
+      - name: Check TypeScript compilation
+        working-directory: ./04-cdk-constructs
+        run: npm run build
+
+      - name: Check formatting
+        working-directory: ./04-cdk-constructs
+        run: npm run format -- --check
+        continue-on-error: true
+
+  # Benachrichtigung über Testergebnisse
+  notify:
+    name: Notify Results
+    needs: [test, quality]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Check test status
+        run: |
+          if [ "${{ needs.test.result }}" == "success" ] && [ "${{ needs.quality.result }}" == "success" ]; then
+            echo "✅ All tests passed!"
+            echo "status=success" >> $GITHUB_ENV
+          else
+            echo "❌ Tests failed!"
+            echo "status=failure" >> $GITHUB_ENV
+          fi
+
+      - name: Create summary
+        run: |
+          echo "## CDK Constructs Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tests:** ${{ needs.test.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Code Quality:** ${{ needs.quality.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ env.status }}" == "success" ]; then
+            echo "✅ **All checks passed!**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Some checks failed. Please review the logs.**" >> $GITHUB_STEP_SUMMARY
+          fi
