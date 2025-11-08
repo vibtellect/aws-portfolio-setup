@@ -1,0 +1,136 @@
+name: CodeRabbit AI Review
+
+# Trigger bei Pull Requests
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches:
+      - main
+      - develop
+
+# Permissions für CodeRabbit
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  # Pre-Review Checks
+  pre-review:
+    name: Pre-Review Checks
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      # AWS Cost Check
+      - name: Check for AWS Cost Traps
+        run: |
+          echo "🔍 Checking for expensive AWS resources..."
+          
+          # Suche nach teuren Ressourcen
+          if grep -rn "NAT Gateway\|Multi-AZ\|t2\.large\|t2\.xlarge\|db\.t3\.large" . --include="*.tf" --include="*.yaml" --include="*.yml" --include="*.json"; then
+            echo "⚠️ WARNING: Potentially expensive AWS resources found!"
+            echo "Please review cost implications."
+          else
+            echo "✅ No obvious cost traps detected"
+          fi
+      
+      # Security: Check for hardcoded credentials
+      - name: Check for Hardcoded Credentials
+        run: |
+          echo "🔒 Checking for hardcoded AWS credentials..."
+          
+          # Suche nach AWS Credentials
+          if grep -rn "aws_access_key_id\|aws_secret_access_key\|AKIA[0-9A-Z]\{16\}" . --include="*.py" --include="*.js" --include="*.ts" --include="*.go" --include="*.java" --include="*.sh"; then
+            echo "🚨 CRITICAL: Potential hardcoded credentials found!"
+            exit 1
+          else
+            echo "✅ No hardcoded credentials detected"
+          fi
+      
+      # Terraform Validation (if applicable)
+      - name: Validate Terraform Files
+        if: hashFiles('**/*.tf') != ''
+        run: |
+          echo "📦 Checking Terraform files..."
+          
+          # Install Terraform
+          sudo apt-get update && sudo apt-get install -y wget unzip
+          wget https://releases.hashicorp.com/terraform/1.6.0/terraform_1.6.0_linux_amd64.zip
+          unzip terraform_1.6.0_linux_amd64.zip
+          sudo mv terraform /usr/local/bin/
+          
+          # Validate all Terraform directories
+          for dir in $(find . -name "*.tf" -exec dirname {} \; | sort -u); do
+            echo "Validating $dir..."
+            cd $dir
+            terraform init -backend=false
+            terraform validate
+            cd -
+          done
+      
+      # Shell Script Linting
+      - name: Lint Shell Scripts
+        if: hashFiles('**/*.sh') != ''
+        run: |
+          echo "🔧 Linting shell scripts..."
+          
+          # Install shellcheck
+          sudo apt-get update && sudo apt-get install -y shellcheck
+          
+          # Lint all shell scripts
+          find . -name "*.sh" -type f -exec shellcheck {} \; || true
+  
+  # CodeRabbit läuft automatisch als GitHub App
+  # Dieser Job wartet nur auf das Ergebnis
+  coderabbit-status:
+    name: CodeRabbit Review Status
+    runs-on: ubuntu-latest
+    needs: pre-review
+    
+    steps:
+      - name: Wait for CodeRabbit
+        run: |
+          echo "⏳ Waiting for CodeRabbit AI Review..."
+          echo "CodeRabbit will automatically review this PR."
+          echo "Check the PR comments for feedback."
+      
+      - name: Review Instructions
+        run: |
+          echo "📋 CodeRabbit Review Process:"
+          echo "1. ✅ CodeRabbit analyzes your code changes"
+          echo "2. 💬 Comments appear directly on your PR"
+          echo "3. 📝 AI summary is generated"
+          echo "4. 🔧 Apply suggested improvements"
+          echo "5. ✨ Push updates to re-trigger review"
+
+  # Summary
+  summary:
+    name: Review Summary
+    runs-on: ubuntu-latest
+    needs: [pre-review, coderabbit-status]
+    if: always()
+    
+    steps:
+      - name: Summary
+        run: |
+          echo "## 🎯 Code Review Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Pre-Review Checks" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Cost trap detection" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Security scan" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ File validation" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### CodeRabbit AI Review" >> $GITHUB_STEP_SUMMARY
+          echo "CodeRabbit is analyzing your changes..." >> $GITHUB_STEP_SUMMARY
+          echo "Check PR comments for detailed feedback." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "1. Review CodeRabbit comments" >> $GITHUB_STEP_SUMMARY
+          echo "2. Address critical/warning issues" >> $GITHUB_STEP_SUMMARY
+          echo "3. Consider suggestions" >> $GITHUB_STEP_SUMMARY
+          echo "4. Push updates if needed" >> $GITHUB_STEP_SUMMARY

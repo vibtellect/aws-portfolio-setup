@@ -1,0 +1,109 @@
+# CodeRabbit Configuration
+# Dokumentation: https://docs.coderabbit.ai/configuration
+
+# Sprache für Reviews (Deutsch)
+language: de
+
+# Review-Einstellungen
+reviews:
+  # Automatische Reviews für Pull Requests
+  auto_review:
+    enabled: true
+    drafts: false  # Keine Reviews für Draft PRs
+  
+  # Review-Fokus
+  focus:
+    - security        # Sicherheitsprobleme
+    - performance     # Performance-Probleme
+    - best-practices  # Best Practices
+    - bugs           # Potentielle Bugs
+    - maintainability # Code-Wartbarkeit
+  
+  # Tone der Reviews
+  tone: constructive
+  
+  # Review-Tiefe
+  level: detailed
+
+# AWS-spezifische Checks
+custom_rules:
+  - id: aws-cost-check
+    description: "Prüfe auf potentielle Kostenfallen (NAT Gateway, Multi-AZ, etc.)"
+    pattern: "(NAT Gateway|Multi-AZ|t2\\.(large|xlarge)|db\\.t3\\.(large|xlarge))"
+    severity: warning
+    message: "⚠️ Achtung: Diese Ressource könnte hohe Kosten verursachen. Prüfe Free Tier Alternativen."
+  
+  - id: aws-credentials
+    description: "Verhindere hardcoded AWS Credentials"
+    pattern: "(aws_access_key_id|aws_secret_access_key)\\s*=\\s*['\"][A-Za-z0-9+/=]{20,}['\"]"
+    severity: critical
+    message: "🚨 KRITISCH: Hardcoded AWS Credentials gefunden! Niemals Credentials committen!"
+  
+  - id: terraform-state
+    description: "Warne bei fehlender Remote State Configuration"
+    pattern: "terraform\\s*{[^}]*backend"
+    severity: info
+    message: "💡 Tipp: Remote State Backend konfiguriert?"
+
+# Dateien/Ordner ignorieren
+ignore:
+  - "**/*.md"           # Markdown ignorieren (nur Code reviewen)
+  - "**/node_modules/**"
+  - "**/.git/**"
+  - "**/dist/**"
+  - "**/build/**"
+  - "**/.terraform/**"
+  - "**/cdk.out/**"
+
+# Spezielle Pfade für AWS-Projekt
+paths:
+  iac:  # Infrastructure as Code
+    - "**/*.tf"         # Terraform
+    - "**/*.yaml"       # CloudFormation
+    - "**/*.yml"
+    - "**/cdk/**"       # CDK
+  
+  scripts:
+    - "scripts/**/*.sh"
+    - "scripts/**/*.py"
+  
+  policies:
+    - "**/iam-policies/**"
+    - "**/*-policy.json"
+
+# Automatische Labels
+labels:
+  security: ["security", "iam", "credentials"]
+  cost: ["cost-optimization", "budget"]
+  infrastructure: ["terraform", "cdk", "cloudformation"]
+  
+# Kommentar-Einstellungen
+comments:
+  # Minimiere Noise
+  auto_reply: true
+  summarize: true
+  inline: true
+  
+# GitHub Integration
+github:
+  # Review bei diesen Events
+  trigger_events:
+    - pull_request
+    - pull_request_review
+  
+  # Review-Status
+  status_checks:
+    enabled: true
+    strict: false  # Nicht blockieren, nur Hinweise
+
+# Lernmodus
+learning:
+  enabled: true
+  feedback: true
+
+# Opt-in Features
+features:
+  ai_summary: true
+  code_suggestions: true
+  security_scan: true
+  performance_insights: true
