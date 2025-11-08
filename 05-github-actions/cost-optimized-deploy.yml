@@ -14,7 +14,7 @@ on:
 env:
   AWS_REGION: eu-central-1
   BUDGET_LIMIT: 10  # 10€ Budget Limit
-  NODE_VERSION: 18
+  NODE_VERSION: 22
   PYTHON_VERSION: 3.11
   GO_VERSION: 1.21
 

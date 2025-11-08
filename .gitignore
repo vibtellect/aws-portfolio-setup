@@ -294,3 +294,11 @@ personal-billing.csv
 
 # Kiro tool files
 .kiro/
+
+# ==============================================================================
+# CodeRabbit (AI Code Review)
+# ==============================================================================
+
+# CodeRabbit local cache (if any)
+.coderabbit/
+*.coderabbit.cache
