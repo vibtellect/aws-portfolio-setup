@@ -3,7 +3,7 @@
 > **Live-Dokument** – Wird bei jedem Fortschritt aktualisiert
 > **Letzte Aktualisierung:** 2025-01-08
 > **Phase:** 2 (Implementation mit TDD)
-> **Overall Progress:** 15.4% (2/13 Constructs fertig)
+> **Overall Progress:** 23.1% (3/13 Constructs fertig)
 
 ---
 
@@ -11,17 +11,17 @@
 
 | Kategorie | Total | ✅ Fertig | 🟡 In Progress | 🔴 Geplant |
 |-----------|-------|-----------|----------------|------------|
-| **Primitives** | 7 | 2 | 0 | 5 |
+| **Primitives** | 7 | 3 | 0 | 4 |
 | **Patterns** | 6 | 0 | 0 | 6 |
-| **GESAMT** | 13 | 2 | 0 | 11 |
+| **GESAMT** | 13 | 3 | 0 | 10 |
 
 ### Completion Metrics
 
 ```
-Implementierung (src/):         ████░░░░░░░░░░░░░░░░░░░░  15% (2/13)
-Tests (test/):                  ████░░░░░░░░░░░░░░░░░░░░  15% (2/13)
-Coverage:                       ████████████████████████ 100% (2/2)
-Dokumentation (README.md):      ████░░░░░░░░░░░░░░░░░░░░  15% (2/13)
+Implementierung (src/):         ██████░░░░░░░░░░░░░░░░░░  23% (3/13)
+Tests (test/):                  ██████░░░░░░░░░░░░░░░░░░  23% (3/13)
+Coverage:                       ████████████████████████ 100% (3/3)
+Dokumentation (README.md):      ██████░░░░░░░░░░░░░░░░░░  23% (3/13)
 Beispiele (examples/):          ░░░░░░░░░░░░░░░░░░░░░░░░   0% (0/13)
 CHANGELOG.md:                   ░░░░░░░░░░░░░░░░░░░░░░░░   0% (0/13)
 ```
@@ -29,16 +29,16 @@ CHANGELOG.md:                   ░░░░░░░░░░░░░░░░
 ### Test Statistics
 
 ```
-Total Tests:                    24 tests
-Passing Tests:                  24 (100%)
+Total Tests:                    43 tests
+Passing Tests:                  43 (100%)
 Failing Tests:                  0
 Average Coverage:               100%
-Total Lines Tested:             ~450 LOC
+Total Lines Tested:             ~800 LOC
 ```
 
 ---
 
-## ✅ Completed Constructs (2/13)
+## ✅ Completed Constructs (3/13)
 
 ### 1. primitives/observability/log-group-short-retention
 
@@ -135,15 +135,69 @@ readonly roleName: string;
 
 ---
 
-## 🔄 Planned Constructs (11/13)
+### 3. primitives/security/kms-key-managed
 
-### Priority 1: Security & Messaging (3 Constructs)
+**Status:** ✅ **100% Complete** – Production-Ready
 
-#### 3. primitives/security/kms-key-managed
-- **Status:** 🔴 Geplant
-- **Priorität:** Hoch (benötigt von SQS/SNS)
-- **Geschätzte Zeit:** 2-3h
-- **Features:** KMS Key mit automatischer Rotation, Key Policies, Aliase
+**Implementiert:** 2025-01-08
+
+**Features:**
+- KMS Customer Managed Key (CMK) mit automatischer Rotation (standardmäßig aktiviert)
+- Key Alias Support (auto-generiert oder custom)
+- Environment-aware RemovalPolicy (dev=DESTROY, prod=RETAIN)
+- Service-spezifische Access Policies (Lambda, SQS, SNS, S3)
+- Props Validierung (Description max 8192 chars, Alias Pattern)
+- Security Best Practices: Rotation enabled, Least-Privilege Access
+
+**Tests:** 19 Tests, 100% Coverage
+- ✅ Creates KMS key with default settings
+- ✅ Enables key rotation by default
+- ✅ Allows disabling key rotation
+- ✅ Creates key alias
+- ✅ Uses custom alias when provided
+- ✅ Uses custom description when provided
+- ✅ Allows Lambda service to use key when enabled
+- ✅ Allows SQS service to use key when enabled
+- ✅ Allows SNS service to use key when enabled
+- ✅ Allows S3 service to use key when enabled
+- ✅ Allows multiple services to use key simultaneously
+- ✅ Uses DESTROY removal policy for dev stacks
+- ✅ Uses RETAIN removal policy for production stacks
+- ✅ Allows custom removal policy
+- ✅ Provides key, keyArn, and keyId outputs
+- ✅ Throws error when description exceeds 8192 characters
+- ✅ Throws error when alias does not start with "alias/"
+- ✅ Throws error when alias starts with "alias/aws/"
+- ✅ Generates default alias from construct id
+
+**Props:**
+```typescript
+interface KmsKeyManagedProps {
+  description?: string;                // Default: 'Managed KMS key created by CDK'
+  alias?: string;                      // Default: auto-generated from ID
+  enableKeyRotation?: boolean;         // Default: true
+  enableLambdaAccess?: boolean;        // Default: false
+  enableSqsAccess?: boolean;           // Default: false
+  enableSnsAccess?: boolean;           // Default: false
+  enableS3Access?: boolean;            // Default: false
+  removalPolicy?: cdk.RemovalPolicy;   // Default: Auto-detect
+}
+```
+
+**Outputs:**
+```typescript
+readonly key: kms.Key;
+readonly keyArn: string;
+readonly keyId: string;
+```
+
+**Lines of Code:** ~350 (src) + ~320 (tests)
+
+---
+
+## 🔄 Planned Constructs (10/13)
+
+### Priority 1: Security & Messaging (2 Constructs)
 
 #### 4. primitives/messaging/sqs-queue-encrypted
 - **Status:** 🔴 Geplant
@@ -231,6 +285,7 @@ Ein Construct gilt als "fertig" wenn:
 - ✅ Template-System aktualisiert (@jest/globals Fix)
 - ✅ **log-group-short-retention** implementiert (11 Tests, 100% Coverage)
 - ✅ **iam-role-lambda-basic** implementiert (13 Tests, 100% Coverage)
+- ✅ **kms-key-managed** implementiert (19 Tests, 100% Coverage)
 - ✅ Dokumentation aufgeräumt (README.md, IMPLEMENTATION_STATUS.md)
 
 ### 2025-01-07
@@ -240,9 +295,10 @@ Ein Construct gilt als "fertig" wenn:
 - ✅ TDD_GUIDE.md geschrieben
 
 ### Next Steps (geplant)
-- 🔄 **kms-key-managed** implementieren (Priority 1)
 - 🔄 **sqs-queue-encrypted** implementieren (Priority 1)
 - 🔄 **sns-topic-encrypted** implementieren (Priority 1)
+- 🔄 **s3-bucket-secure** implementieren (Priority 2)
+- 🔄 **lambda-function-secure** implementieren (Priority 2)
 - 🔄 Erste Pattern implementieren (http-api-lambda)
 - 🔄 CI/CD Pipeline testen mit GitHub Actions
 
@@ -250,12 +306,12 @@ Ein Construct gilt als "fertig" wenn:
 
 ## 📊 Estimated Completion
 
-**Aktuelle Velocity:** 2 Constructs pro Tag (mit TDD)
+**Aktuelle Velocity:** 3 Constructs pro Tag (mit TDD)
 
 **Verbleibende Constructs:**
-- 5 Primitives × 2-3h = 10-15h
+- 4 Primitives × 2-3h = 8-12h
 - 6 Patterns × 4-6h = 24-36h
-- **Total:** 34-51h (~5-7 Tage)
+- **Total:** 32-48h (~4-6 Tage)
 
 **Geschätzte Fertigstellung:** Mitte Januar 2025
 

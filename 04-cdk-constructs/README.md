@@ -1,7 +1,7 @@
 # CDK Constructs Library – Test-Driven Development
 
 > **Version:** 2.0.0 | **TDD-Ready** | **Status:** Active Development
-> **Coverage:** 100% | **Tests:** 24 passing | **Constructs:** 2/13 implemented
+> **Coverage:** 100% | **Tests:** 43 passing | **Constructs:** 3/13 implemented
 
 Enterprise-grade AWS CDK Constructs entwickelt mit **Test-Driven Development** (TDD). Sichere Defaults, Kostenoptimierung, 100% Test Coverage.
 
@@ -29,26 +29,26 @@ npm run test:tdd
 
 ## 📊 Implementation Status
 
-### ✅ Implementiert (2/13)
+### ✅ Implementiert (3/13)
 
 | Construct | Domain | Tests | Coverage | Status |
 |-----------|--------|-------|----------|--------|
 | `log-group-short-retention` | observability | 11 | 100% | ✅ Prod-Ready |
 | `iam-role-lambda-basic` | security | 13 | 100% | ✅ Prod-Ready |
+| `kms-key-managed` | security | 19 | 100% | ✅ Prod-Ready |
 
-### 🔄 In Progress (3/13)
+### 🔄 In Progress (2/13)
 
-- `kms-key-managed` (security)
 - `sqs-queue-encrypted` (messaging)
 - `sns-topic-encrypted` (messaging)
 
 ### ⏳ Planned (8/13)
 
 - `s3-bucket-secure` (storage)
+- `lambda-function-secure` (compute)
 - `network-baseline` (networking)
 - `dynamodb-table-standard` (database)
-- `lambda-function-secure` (compute)
-- 4 weitere...
+- 4 weitere patterns...
 
 **Detaillierter Status:** [IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md)
 
@@ -183,6 +183,34 @@ const role = new IamRoleLambdaBasic(this, 'LambdaRole', {
 
 ---
 
+### 3. kms-key-managed (security)
+
+KMS Customer Managed Key mit Security Best Practices.
+
+```typescript
+import { KmsKeyManaged } from './primitives/security/kms-key-managed/src';
+
+const key = new KmsKeyManaged(this, 'EncryptionKey', {
+  description: 'Encryption key for sensitive data',
+  enableKeyRotation: true, // Default: true
+  enableLambdaAccess: true, // Optional: Lambda service access
+  enableSqsAccess: true,    // Optional: SQS service access
+  alias: 'alias/my-app-key', // Optional: Custom alias
+});
+```
+
+**Features:**
+- ✅ Automatic key rotation enabled by default
+- ✅ Key alias support (auto-generated or custom)
+- ✅ Environment-aware RemovalPolicy (dev=DESTROY, prod=RETAIN)
+- ✅ Service-specific access policies (Lambda, SQS, SNS, S3)
+- ✅ Props validation (description max 8192 chars, alias patterns)
+- ✅ 19 Tests, 100% Coverage
+
+**Location:** `primitives/security/kms-key-managed/`
+
+---
+
 ## 🚀 Neues Construct erstellen
 
 ### Automatisches Scaffolding
@@ -276,10 +304,10 @@ npm run test:tdd
 ## 📊 Statistiken
 
 ```
-Constructs implementiert:     2/13 (15%)
-Tests gesamt:                 24 tests
+Constructs implementiert:     3/13 (23%)
+Tests gesamt:                 43 tests
 Coverage:                     100%
-Lines of Code:                ~1,200 LOC
+Lines of Code:                ~1,550 LOC
 Zeit pro Construct:           ~2-3 Stunden (mit TDD)
 ```
 
