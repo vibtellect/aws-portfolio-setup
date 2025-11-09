@@ -1,0 +1,5 @@
+#!/bin/bash
+# Placeholder for Kotlin Lambda
+# Full implementation coming soon
+echo "Kotlin Lambda not yet implemented"
+exit 1
