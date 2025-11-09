@@ -1,36 +1,57 @@
-# CDK Constructs Library – Test-Driven Development
+# CDK Constructs Library – Monolithic & Production-Ready
 
-> **Version:** 2.0.0 | **Phase 2.1 COMPLETE** ✅ | **Status:** MERGE-READY
-> **Coverage:** 100% | **Tests:** 73 passing | **Constructs:** 5/13 implemented (38.5%)
+> **Version:** 2.0.0 | **Architecture:** Monolithic Library ✅ | **Status:** Production-Ready
+> **Coverage:** ~94% | **Tests:** 73 passing | **Constructs:** 5/13 implemented (38.5%)
 
 Enterprise-grade AWS CDK Constructs entwickelt mit **Test-Driven Development** (TDD). Sichere Defaults, Kostenoptimierung, 100% Test Coverage.
 
-## 🎉 Phase 2.1 Abgeschlossen!
+## 🎉 Version 2.0 - Monolithic Library!
 
-**Erste 5 Constructs sind Production-Ready:**
-- ✅ Alle CodeRabbit Review Issues behoben
-- ✅ CI/CD Pipeline funktioniert (GitHub Actions)
-- ✅ 73 Tests, 100% Coverage
-- ✅ Vollständige Dokumentation
+**Migration von Multi-Package zu Monolithic abgeschlossen:**
+- ✅ **1 Package** statt 6 separater Packages
+- ✅ **Einfache Imports:** `from '@vibtellect/aws-cdk-constructs'`
+- ✅ **Ein Build, Ein Test-Run**
+- ✅ 73 Tests, alle bestanden
+- ✅ ~83% weniger Config-Overhead
 
-**Branch:** `claude/review-plan-structure-011CUvxHP72xqzTARyWPFSx6` - Ready to merge!
+**Migration Guide:** [MIGRATION_V1_TO_V2.md](./MIGRATION_V1_TO_V2.md)
+**Architecture Review:** [ARCHITECTURE_REVIEW.md](./ARCHITECTURE_REVIEW.md)
 
 ---
 
 ## 🎯 Quick Start
 
+### Installation & Setup
 ```bash
-# 1. Neues Construct mit TDD erstellen
-npm run scaffold primitives observability my-construct
+# Clone & Install
+cd 04-cdk-constructs
+npm install
 
-# 2. TDD Watch Mode starten
-cd primitives/observability/my-construct
-npm run test:tdd
+# Build
+npm run build
 
-# 3. Test-Driven Development:
-#    🔴 RED:    Test schreiben (fehlschlägt)
-#    🟢 GREEN:  Code implementieren (Test besteht)
-#    🔧 REFACTOR: Code verbessern
+# Run Tests
+npm test
+npm run test:tdd    # TDD Watch Mode
+```
+
+### Usage in Your Project
+```typescript
+// Import constructs
+import {
+  IamRoleLambdaBasic,
+  LogGroupShortRetention,
+  KmsKeyManaged,
+  SqsQueueEncrypted,
+  SnsTopicEncrypted
+} from '@vibtellect/aws-cdk-constructs';
+
+// Use in your CDK stack
+const role = new IamRoleLambdaBasic(this, 'LambdaRole', {
+  enableXray: true,
+});
+
+const logGroup = new LogGroupShortRetention(this, 'Logs');
 ```
 
 **Vollständiger TDD Guide:** [TDD_GUIDE.md](./TDD_GUIDE.md)
@@ -61,36 +82,51 @@ npm run test:tdd
 
 ---
 
-## 🏗️ Architektur
+## 🏗️ Architektur (Monolithic Library)
 
 ```
 04-cdk-constructs/
-├── primitives/              # Einzelne AWS-Ressourcen (z.B. S3, Lambda, IAM)
-│   ├── compute/
-│   ├── storage/
-│   ├── security/
-│   ├── observability/       # ✅ log-group-short-retention (100% Coverage)
-│   ├── messaging/
-│   └── ...
+├── package.json             # ✅ Ein zentrales Package
+├── tsconfig.json            # ✅ Eine TypeScript Config
+├── jest.config.js           # ✅ Eine Test Config
 │
-├── patterns/                # Multi-Service Kombinationen (z.B. API + Lambda)
-│   ├── api/
-│   ├── async/
-│   └── ...
+├── src/                     # Source Code
+│   ├── index.ts             # ✅ Zentraler Export für alle Constructs
+│   └── primitives/
+│       ├── security/
+│       │   ├── iam-role-lambda-basic.ts
+│       │   └── kms-key-managed.ts
+│       ├── observability/
+│       │   └── log-group-short-retention.ts
+│       ├── messaging/
+│       │   ├── sqs-queue-encrypted.ts
+│       │   └── sns-topic-encrypted.ts
+│       ├── storage/          # (geplant)
+│       ├── compute/          # (geplant)
+│       └── database/         # (geplant)
 │
-├── .construct-template/     # Templates für neues Scaffolding
+├── test/                    # Tests
+│   └── primitives/
+│       ├── security/
+│       │   ├── iam-role-lambda-basic.test.ts
+│       │   └── kms-key-managed.test.ts
+│       └── ...
 │
-├── scripts/
-│   ├── create-construct.sh  # Automatisches Scaffolding
-│   └── create-construct.js
+├── lib/                     # Build Output (TypeScript → JavaScript)
 │
 └── *.md                     # Dokumentation
     ├── README.md            # ← Diese Datei
-    ├── TDD_GUIDE.md         # Umfassender TDD-Workflow
-    ├── GETTING_STARTED.md   # Erste Schritte
-    ├── CONTRIBUTING.md      # Contribution Guidelines
-    └── IMPLEMENTATION_STATUS.md  # Detaillierter Status
+    ├── MIGRATION_V1_TO_V2.md      # Migration Guide
+    ├── ARCHITECTURE_REVIEW.md     # Architektur-Analyse
+    ├── TDD_GUIDE.md               # TDD-Workflow
+    └── IMPLEMENTATION_STATUS.md   # Detaillierter Status
 ```
+
+**Vorteile der Monolithic Library:**
+- ✅ Ein `npm install`, ein `npm build`, ein `npm test`
+- ✅ Einfache Imports: `from '@vibtellect/aws-cdk-constructs'`
+- ✅ Keine Config-Duplikation (1x package.json statt 6x)
+- ✅ Schnellere Entwicklung, einfachere Wartung
 
 ---
 
@@ -140,7 +176,7 @@ npm run test:ci       # CI/CD Mode
 CloudWatch Log Group mit kostenoptimierter Retention.
 
 ```typescript
-import { LogGroupShortRetention } from './primitives/observability/log-group-short-retention/src';
+import { LogGroupShortRetention } from '@vibtellect/aws-cdk-constructs';
 import * as logs from 'aws-cdk-lib/aws-logs';
 
 const logGroup = new LogGroupShortRetention(this, 'MyLogs', {
@@ -156,7 +192,7 @@ const logGroup = new LogGroupShortRetention(this, 'MyLogs', {
 - ✅ Validierung (max 512 Zeichen für Name)
 - ✅ 11 Tests, 100% Coverage
 
-**Location:** `primitives/observability/log-group-short-retention/`
+**Location:** `src/primitives/observability/log-group-short-retention.ts`
 
 ---
 
@@ -165,7 +201,7 @@ const logGroup = new LogGroupShortRetention(this, 'MyLogs', {
 IAM-Rolle für Lambda mit Least-Privilege Prinzip.
 
 ```typescript
-import { IamRoleLambdaBasic } from './primitives/security/iam-role-lambda-basic/src';
+import { IamRoleLambdaBasic } from '@vibtellect/aws-cdk-constructs';
 import * as iam from 'aws-cdk-lib/aws-iam';
 
 const role = new IamRoleLambdaBasic(this, 'LambdaRole', {
@@ -187,7 +223,7 @@ const role = new IamRoleLambdaBasic(this, 'LambdaRole', {
 - ✅ Maximum 10 Extra Policies Limit
 - ✅ 13 Tests, 100% Coverage
 
-**Location:** `primitives/security/iam-role-lambda-basic/`
+**Location:** `src/primitives/security/iam-role-lambda-basic.ts`
 
 ---
 
@@ -196,7 +232,7 @@ const role = new IamRoleLambdaBasic(this, 'LambdaRole', {
 KMS Customer Managed Key mit Security Best Practices.
 
 ```typescript
-import { KmsKeyManaged } from './primitives/security/kms-key-managed/src';
+import { KmsKeyManaged } from '@vibtellect/aws-cdk-constructs';
 
 const key = new KmsKeyManaged(this, 'EncryptionKey', {
   description: 'Encryption key for sensitive data',
@@ -215,7 +251,7 @@ const key = new KmsKeyManaged(this, 'EncryptionKey', {
 - ✅ Props validation (description max 8192 chars, alias patterns)
 - ✅ 19 Tests, 100% Coverage
 
-**Location:** `primitives/security/kms-key-managed/`
+**Location:** `src/primitives/security/kms-key-managed.ts`
 
 ---
 
@@ -224,7 +260,7 @@ const key = new KmsKeyManaged(this, 'EncryptionKey', {
 SQS Queue mit KMS-Verschlüsselung und optionalem Dead-Letter Queue.
 
 ```typescript
-import { SqsQueueEncrypted } from './primitives/messaging/sqs-queue-encrypted/src';
+import { SqsQueueEncrypted } from '@vibtellect/aws-cdk-constructs';
 
 const queue = new SqsQueueEncrypted(this, 'MyQueue', {
   kmsKey: kmsKey, // Optional: custom KMS key
@@ -244,7 +280,7 @@ const queue = new SqsQueueEncrypted(this, 'MyQueue', {
 - ✅ Environment-aware RemovalPolicy (dev=DESTROY, prod=RETAIN)
 - ✅ 17 Tests, 100% Coverage
 
-**Location:** `primitives/messaging/sqs-queue-encrypted/`
+**Location:** `src/primitives/messaging/sqs-queue-encrypted.ts`
 
 ---
 
@@ -253,7 +289,7 @@ const queue = new SqsQueueEncrypted(this, 'MyQueue', {
 SNS Topic mit KMS-Verschlüsselung und Subscription Management.
 
 ```typescript
-import { SnsTopicEncrypted } from './primitives/messaging/sns-topic-encrypted/src';
+import { SnsTopicEncrypted } from '@vibtellect/aws-cdk-constructs';
 
 const topic = new SnsTopicEncrypted(this, 'MyTopic', {
   displayName: 'My Topic', // Optional: display name
@@ -273,7 +309,7 @@ const topic = new SnsTopicEncrypted(this, 'MyTopic', {
 - ✅ Subscription-ready (output für ARN)
 - ✅ 13 Tests, 100% Coverage
 
-**Location:** `primitives/messaging/sns-topic-encrypted/`
+**Location:** `src/primitives/messaging/sns-topic-encrypted.ts`
 
 ---
 
