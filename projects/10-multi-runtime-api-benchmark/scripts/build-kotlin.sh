@@ -13,8 +13,11 @@ cd "$LAMBDA_DIR"
 # Check if gradlew exists, if not use gradle
 if [ -x "./gradlew" ]; then
     GRADLE_CMD="./gradlew"
+elif [ -x "../../gradlew" ]; then
+    GRADLE_CMD="../../gradlew"
 else
-    GRADLE_CMD="gradle"
+    echo "Error: gradlew not found in $LAMBDA_DIR or $PROJECT_ROOT. Please ensure gradlew is available and executable."
+    exit 1
 fi
 
 # Build with Gradle
