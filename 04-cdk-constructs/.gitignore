@@ -12,10 +12,15 @@ node_modules/
 
 # Test coverage
 coverage/
+coverage-integration/
 
 # CDK
 cdk.out/
 .cdk.staging/
+
+# LocalStack
+localstack-data/
+.env
 
 # Logs
 *.log

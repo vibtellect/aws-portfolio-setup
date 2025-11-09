@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  localstack:
+    container_name: aws-cdk-localstack
+    image: localstack/localstack:latest
+    ports:
+      - "4566:4566"            # LocalStack Gateway
+      - "4510-4559:4510-4559"  # External services port range
+    environment:
+      # Core Configuration
+      - SERVICES=s3,dynamodb,lambda,sqs,sns,cloudwatch,logs,iam,sts,kms,apigateway,cognito-idp,cloudfront,route53
+      - DEBUG=1
+      - DOCKER_HOST=unix:///var/run/docker.sock
+
+      # AWS Configuration
+      - AWS_DEFAULT_REGION=eu-central-1
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+
+      # Lambda Configuration
+      - LAMBDA_EXECUTOR=docker-reuse
+      - LAMBDA_REMOVE_CONTAINERS=true
+      - LAMBDA_DOCKER_NETWORK=bridge
+
+      # Persistence (optional - uncomment to persist data)
+      # - PERSISTENCE=1
+      # - DATA_DIR=/tmp/localstack/data
+
+      # CDK Configuration
+      - CDK_DEFAULT_ACCOUNT=000000000000
+
+      # Additional Settings
+      - EXTRA_CORS_ALLOWED_ORIGINS=*
+      - SKIP_SSL_CERT_DOWNLOAD=1
+
+    volumes:
+      - "${LOCALSTACK_VOLUME_DIR:-./localstack-data}:/var/lib/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "./init-scripts:/etc/localstack/init/ready.d"
+    networks:
+      - localstack-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+networks:
+  localstack-network:
+    driver: bridge

@@ -9,6 +9,12 @@ module.exports = {
     '**/__tests__/**/*.test.ts',
   ],
 
+  // Exclude integration tests from unit test runs
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    '/test/integration/',
+  ],
+
   // Coverage Configuration
   collectCoverageFrom: [
     '**/src/**/*.ts',
