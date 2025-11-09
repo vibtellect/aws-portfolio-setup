@@ -52,7 +52,7 @@ class DynamoDBClient:
             logger.info(f"Created item: {item_id}")
             return Item(**item)
         except ClientError as e:
-            logger.error(f"Error creating item: {e}")
+            logger.exception("Error creating item")
             raise
 
     def get_item(self, item_id: str) -> Optional[Item]:
