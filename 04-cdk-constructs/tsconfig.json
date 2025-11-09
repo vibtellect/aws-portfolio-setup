@@ -51,8 +51,7 @@
     "test",
     "**/*.test.ts",
     "**/*.spec.ts",
-    "coverage",
-    "primitives"
+    "coverage"
   ],
   "include": [
     "src/**/*"
