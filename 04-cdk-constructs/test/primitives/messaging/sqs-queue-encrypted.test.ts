@@ -2,7 +2,7 @@ import { describe, test, beforeEach, expect } from '@jest/globals';
 import { App, Stack, RemovalPolicy, Duration } from 'aws-cdk-lib';
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import * as kms from 'aws-cdk-lib/aws-kms';
-import { SqsQueueEncrypted } from '../src';
+import { SqsQueueEncrypted } from '../../../src/primitives/messaging/sqs-queue-encrypted';
 
 describe('SqsQueueEncrypted', () => {
   let app: App;

@@ -2,7 +2,7 @@ import { describe, test, beforeEach, expect } from '@jest/globals';
 import { App, Stack } from 'aws-cdk-lib';
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import * as iam from 'aws-cdk-lib/aws-iam';
-import { IamRoleLambdaBasic } from '../src';
+import { IamRoleLambdaBasic } from '../../../src/primitives/security/iam-role-lambda-basic';
 
 describe('IamRoleLambdaBasic', () => {
   let app: App;

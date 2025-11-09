@@ -33,8 +33,8 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "outDir": "./dist",
-    "rootDir": "./",
+    "outDir": "./lib",
+    "rootDir": "./src",
 
     // Others
     "skipLibCheck": true,
@@ -42,20 +42,19 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
 
-    // Incremental Compilation (schneller für TDD)
-    "incremental": true,
-    "composite": true
+    // Types
+    "types": ["node", "jest"]
   },
   "exclude": [
     "node_modules",
-    "dist",
+    "lib",
+    "test",
     "**/*.test.ts",
     "**/*.spec.ts",
-    "**/examples/**",
-    "coverage"
+    "coverage",
+    "primitives"
   ],
   "include": [
-    "primitives/*/*/src/**/*",
-    "patterns/*/*/src/**/*"
+    "src/**/*"
   ]
 }

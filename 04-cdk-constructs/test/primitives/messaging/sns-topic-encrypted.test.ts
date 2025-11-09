@@ -2,7 +2,7 @@ import { describe, test, beforeEach, expect } from '@jest/globals';
 import { App, Stack, RemovalPolicy } from 'aws-cdk-lib';
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import * as kms from 'aws-cdk-lib/aws-kms';
-import { SnsTopicEncrypted } from '../src';
+import { SnsTopicEncrypted } from '../../../src/primitives/messaging/sns-topic-encrypted';
 
 describe('SnsTopicEncrypted', () => {
   let app: App;

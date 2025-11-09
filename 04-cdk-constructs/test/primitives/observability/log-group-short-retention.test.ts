@@ -2,7 +2,7 @@ import { describe, test, beforeEach, expect } from '@jest/globals';
 import { App, Stack, RemovalPolicy } from 'aws-cdk-lib';
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import * as logs from 'aws-cdk-lib/aws-logs';
-import { LogGroupShortRetention } from '../src';
+import { LogGroupShortRetention } from '../../../src/primitives/observability/log-group-short-retention';
 
 describe('LogGroupShortRetention', () => {
   let app: App;

@@ -1,7 +1,7 @@
 import { describe, test, beforeEach, expect } from '@jest/globals';
 import { App, Stack, RemovalPolicy } from 'aws-cdk-lib';
 import { Template, Match } from 'aws-cdk-lib/assertions';
-import { KmsKeyManaged } from '../src';
+import { KmsKeyManaged } from '../../../src/primitives/security/kms-key-managed';
 
 describe('KmsKeyManaged', () => {
   let app: App;
