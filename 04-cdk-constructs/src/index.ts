@@ -68,3 +68,10 @@ export type { CognitoUserPoolStandardProps } from './primitives/auth/cognito-use
 
 export { ApiGatewayRestApiStandard } from './primitives/api/api-gateway-rest-api-standard';
 export type { ApiGatewayRestApiStandardProps } from './primitives/api/api-gateway-rest-api-standard';
+
+// ============================================================================
+// PRIMITIVES - CDN
+// ============================================================================
+
+export { CloudFrontDistributionSecure } from './primitives/cdn/cloudfront-distribution-secure';
+export type { CloudFrontDistributionSecureProps } from './primitives/cdn/cloudfront-distribution-secure';
