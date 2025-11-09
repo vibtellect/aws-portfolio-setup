@@ -1,0 +1,77 @@
+# Label PRs based on file paths changed
+
+# Source code categories
+'primitive/api':
+  - changed-files:
+    - any-glob-to-any-file: 'src/primitives/api/**/*'
+
+'primitive/auth':
+  - changed-files:
+    - any-glob-to-any-file: 'src/primitives/auth/**/*'
+
+'primitive/cdn':
+  - changed-files:
+    - any-glob-to-any-file: 'src/primitives/cdn/**/*'
+
+'primitive/compute':
+  - changed-files:
+    - any-glob-to-any-file: 'src/primitives/compute/**/*'
+
+'primitive/database':
+  - changed-files:
+    - any-glob-to-any-file: 'src/primitives/database/**/*'
+
+'primitive/messaging':
+  - changed-files:
+    - any-glob-to-any-file: 'src/primitives/messaging/**/*'
+
+'primitive/networking':
+  - changed-files:
+    - any-glob-to-any-file: 'src/primitives/networking/**/*'
+
+'primitive/observability':
+  - changed-files:
+    - any-glob-to-any-file: 'src/primitives/observability/**/*'
+
+'primitive/security':
+  - changed-files:
+    - any-glob-to-any-file: 'src/primitives/security/**/*'
+
+'primitive/storage':
+  - changed-files:
+    - any-glob-to-any-file: 'src/primitives/storage/**/*'
+
+# Test changes
+'tests':
+  - changed-files:
+    - any-glob-to-any-file: 'test/**/*'
+
+# Documentation
+'documentation':
+  - changed-files:
+    - any-glob-to-any-file:
+      - '**/*.md'
+      - 'docs/**/*'
+
+# CI/CD
+'ci/cd':
+  - changed-files:
+    - any-glob-to-any-file:
+      - '.github/**/*'
+      - '.github/workflows/**/*'
+
+# Dependencies
+'dependencies':
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'package.json'
+      - 'package-lock.json'
+
+# Configuration
+'configuration':
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'tsconfig*.json'
+      - 'jest.config.js'
+      - '.eslintrc*'
+      - '.prettierrc*'

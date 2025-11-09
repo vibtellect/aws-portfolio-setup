@@ -33,6 +33,12 @@ terraform.tfvars
 packaged-template.yaml
 packaged-template.json
 
+# CDK Build & Staging
+cdk.out/
+.cdk.staging/
+*.tsbuildinfo
+cdk.context.json
+
 # ==============================================================================
 # Logs & Monitoring
 # ==============================================================================
