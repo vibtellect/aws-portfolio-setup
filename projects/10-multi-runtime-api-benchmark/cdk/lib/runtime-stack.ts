@@ -1,13 +1,9 @@
 import { Stack, StackProps, CfnOutput, Tags, Duration, Fn } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { Code } from 'aws-cdk-lib/aws-lambda';
-import { LambdaIntegration } from 'aws-cdk-lib/aws-apigateway';
-import { Effect, PolicyStatement } from 'aws-cdk-lib/aws-iam';
-import {
-  LambdaFunctionSecure,
-  IamRoleLambdaBasic,
-  LogGroupShortRetention,
-} from '@vibtellect/aws-cdk-constructs';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as apigateway from 'aws-cdk-lib/aws-apigateway';
+import * as iam from 'aws-cdk-lib/aws-iam';
+import * as logs from 'aws-cdk-lib/aws-logs';
 import { getConfig, RuntimeConfig, COMMON_TAGS } from './config';
 import { RetentionDays } from 'aws-cdk-lib/aws-logs';
 
@@ -26,7 +22,7 @@ export interface RuntimeStackProps extends StackProps {
  * Creates Lambda function for a specific runtime and integrates it with API Gateway
  */
 export class RuntimeStack extends Stack {
-  public readonly lambdaFunction: LambdaFunctionSecure;
+  public readonly lambdaFunction: lambda.Function;
 
   constructor(scope: Construct, id: string, props: RuntimeStackProps) {
     super(scope, id, props);
@@ -42,15 +38,20 @@ export class RuntimeStack extends Stack {
     Tags.of(this).add('Runtime', runtimeConfig.name);
 
     // Create IAM role for Lambda
-    const lambdaRole = new IamRoleLambdaBasic(this, `${runtimeConfig.name}LambdaRole`, {
+    const lambdaRole = new iam.Role(this, `${runtimeConfig.name}LambdaRole`, {
       roleName: `${config.projectName}-${runtimeConfig.name}-lambda-${config.environment}`,
-      enableXRayTracing: config.enableXRay,
+      assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
+      managedPolicies: [
+        iam.ManagedPolicy.fromAwsManagedPolicyName(
+          'service-role/AWSLambdaBasicExecutionRole'
+        ),
+      ],
     });
 
     // Add DynamoDB permissions
     lambdaRole.addToPolicy(
-      new PolicyStatement({
-        effect: Effect.ALLOW,
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
         actions: [
           'dynamodb:PutItem',
           'dynamodb:GetItem',
@@ -63,17 +64,26 @@ export class RuntimeStack extends Stack {
       })
     );
 
-    // Create log group
-    const logGroup = new LogGroupShortRetention(this, `${runtimeConfig.name}LogGroup`, {
-      logGroupName: `/aws/lambda/${config.projectName}-${runtimeConfig.name}-${config.environment}`,
-      retention: config.logRetention,
-    });
+    // Add X-Ray permissions if enabled
+    if (config.enableXRay) {
+      lambdaRole.addToPolicy(
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: [
+            'xray:PutTraceSegments',
+            'xray:PutTelemetryRecords',
+          ],
+          resources: ['*'],
+        })
+      );
+    }
+
 
     // Determine Lambda code based on runtime
     const lambdaCode = this.getLambdaCode(runtimeConfig);
 
     // Create Lambda function
-    this.lambdaFunction = new LambdaFunctionSecure(this, `${runtimeConfig.name}Lambda`, {
+    this.lambdaFunction = new lambda.Function(this, `${runtimeConfig.name}Lambda`, {
       functionName: `${config.projectName}-${runtimeConfig.name}-${config.environment}`,
       description: `${runtimeConfig.displayName} - API Benchmark`,
       runtime: runtimeConfig.runtime,
@@ -82,21 +92,24 @@ export class RuntimeStack extends Stack {
       memorySize: runtimeConfig.memorySize,
       timeout: runtimeConfig.timeout,
       role: lambdaRole,
-      logGroup,
+      logRetention: config.logRetention,
       environment: {
         TABLE_NAME: props.tableName,
         RUNTIME_NAME: runtimeConfig.name,
         ENVIRONMENT: config.environment,
         ...runtimeConfig.environment,
       },
-      tracing: config.enableXRay ? 'ACTIVE' : 'DISABLED',
+      tracing: config.enableXRay ? lambda.Tracing.ACTIVE : lambda.Tracing.DISABLED,
     });
+
+    // Add tags
+    Tags.of(this.lambdaFunction).add('Runtime', runtimeConfig.name);
 
     // Import API Gateway
     const api = this.importApiGateway(props.apiId, props.apiRootResourceId);
 
     // Create Lambda integration
-    const lambdaIntegration = new LambdaIntegration(this.lambdaFunction, {
+    const lambdaIntegration = new apigateway.LambdaIntegration(this.lambdaFunction, {
       proxy: true,
     });
 
@@ -104,7 +117,7 @@ export class RuntimeStack extends Stack {
     // Note: In a real implementation, we'd add these to specific resources
     // For now, we create runtime-specific paths
 
-    const runtimeResource = api.addResource(runtimeConfig.name);
+    const runtimeResource = api.root.addResource(runtimeConfig.name);
 
     // Health endpoint
     const healthResource = runtimeResource.addResource('health');
@@ -143,16 +156,15 @@ export class RuntimeStack extends Stack {
     });
   }
 
-  private getLambdaCode(runtimeConfig: RuntimeConfig): Code {
+  private getLambdaCode(runtimeConfig: RuntimeConfig): lambda.Code {
     // For now, use dummy code - will be replaced with actual implementations
-    return Code.fromAsset(runtimeConfig.codePath);
+    return lambda.Code.fromAsset(runtimeConfig.codePath);
   }
 
-  private importApiGateway(apiId: string, rootResourceId: string) {
-    const { RestApi } = require('aws-cdk-lib/aws-apigateway');
-    return RestApi.fromRestApiAttributes(this, 'ImportedApi', {
+  private importApiGateway(apiId: string, rootResourceId: string): apigateway.RestApi {
+    return apigateway.RestApi.fromRestApiAttributes(this, 'ImportedApi', {
       restApiId: apiId,
       rootResourceId: rootResourceId,
-    });
+    }) as apigateway.RestApi;
   }
 }

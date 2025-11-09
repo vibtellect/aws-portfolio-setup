@@ -1,10 +1,8 @@
 import { Stack, StackProps, CfnOutput, Tags, RemovalPolicy } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { AttributeType, BillingMode, StreamViewType } from 'aws-cdk-lib/aws-dynamodb';
-import {
-  DynamoDbTableStandard,
-  ApiGatewayRestApiStandard,
-} from '@vibtellect/aws-cdk-constructs';
+import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
+import * as apigateway from 'aws-cdk-lib/aws-apigateway';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import { getConfig, COMMON_TAGS, API_CORS_CONFIG } from './config';
 
 export interface SharedStackProps extends StackProps {
@@ -21,8 +19,8 @@ export interface SharedStackProps extends StackProps {
  * These resources are shared across all runtime implementations.
  */
 export class SharedStack extends Stack {
-  public readonly table: DynamoDbTableStandard;
-  public readonly api: ApiGatewayRestApiStandard;
+  public readonly table: dynamodb.ITable;
+  public readonly api: apigateway.RestApi;
 
   constructor(scope: Construct, id: string, props?: SharedStackProps) {
     super(scope, id, props);
@@ -36,35 +34,58 @@ export class SharedStack extends Stack {
     Tags.of(this).add('Environment', config.environment);
 
     // Create DynamoDB table with standard configuration
-    this.table = new DynamoDbTableStandard(this, 'ItemsTable', {
+    this.table = new dynamodb.Table(this, 'ItemsTable', {
       tableName: config.tableName,
       partitionKey: {
         name: 'id',
-        type: AttributeType.STRING,
+        type: dynamodb.AttributeType.STRING,
       },
-      billingMode: BillingMode.PAY_PER_REQUEST,
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       pointInTimeRecovery: config.environment === 'prod',
-      stream: StreamViewType.NEW_AND_OLD_IMAGES,
+      stream: dynamodb.StreamViewType.NEW_AND_OLD_IMAGES,
       removalPolicy: config.environment === 'prod'
         ? RemovalPolicy.RETAIN
         : RemovalPolicy.DESTROY,
+      encryption: dynamodb.TableEncryption.AWS_MANAGED,
+    });
+
+    Tags.of(this.table).add('ManagedBy', 'CDK');
+    Tags.of(this.table).add('CostCenter', config.projectName);
+
+    // Create CloudWatch role for API Gateway
+    const cloudWatchRole = new iam.Role(this, 'ApiGatewayCloudWatchRole', {
+      assumedBy: new iam.ServicePrincipal('apigateway.amazonaws.com'),
+      managedPolicies: [
+        iam.ManagedPolicy.fromAwsManagedPolicyName(
+          'service-role/AmazonAPIGatewayPushToCloudWatchLogs'
+        ),
+      ],
     });
 
     // Create API Gateway
-    this.api = new ApiGatewayRestApiStandard(this, 'BenchmarkApi', {
+    this.api = new apigateway.RestApi(this, 'BenchmarkApi', {
       restApiName: `${config.projectName}-api-${config.environment}`,
       description: 'Multi-Runtime API Benchmark - Performance Comparison Platform',
+      deploy: true,
       deployOptions: {
         stageName: config.environment,
         metricsEnabled: config.enableDetailedMetrics,
         tracingEnabled: config.enableXRay,
         dataTraceEnabled: config.environment !== 'prod',
         loggingLevel: config.environment === 'prod'
-          ? 'ERROR'
-          : 'INFO',
+          ? apigateway.MethodLoggingLevel.ERROR
+          : apigateway.MethodLoggingLevel.INFO,
       },
       defaultCorsPreflightOptions: API_CORS_CONFIG,
+      cloudWatchRole: true,
     });
+
+    // Set account-level CloudWatch role
+    new apigateway.CfnAccount(this, 'ApiGatewayAccount', {
+      cloudWatchRoleArn: cloudWatchRole.roleArn,
+    });
+
+    Tags.of(this.api).add('ManagedBy', 'CDK');
 
     // Create resource structure for API
     // /health - Health check endpoint

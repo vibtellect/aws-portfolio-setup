@@ -1,7 +1,7 @@
 import { Stack, StackProps, Duration, Tags } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { Dashboard, GraphWidget, Metric, Statistic, Unit, Row, SingleValueWidget, LogQueryWidget, LogQueryVisualizationType, TextWidget } from 'aws-cdk-lib/aws-cloudwatch';
-import { IFunction } from 'aws-cdk-lib/aws-lambda';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { ITable } from 'aws-cdk-lib/aws-dynamodb';
 import { Alarm, ComparisonOperator, TreatMissingData } from 'aws-cdk-lib/aws-cloudwatch';
 import { SnsAction } from 'aws-cdk-lib/aws-cloudwatch-actions';
@@ -12,10 +12,10 @@ import { getConfig, COMMON_TAGS } from './config';
 export interface MonitoringStackProps extends StackProps {
   environment?: 'dev' | 'staging' | 'prod';
   lambdaFunctions: {
-    python: IFunction;
-    typescript: IFunction;
-    go: IFunction;
-    kotlin: IFunction;
+    python: lambda.Function;
+    typescript: lambda.Function;
+    go: lambda.Function;
+    kotlin: lambda.Function;
   };
   table: ITable;
   alertEmail?: string;
@@ -353,7 +353,7 @@ Formula: \`(Invocations × Duration × Memory / 1024) × $0.0000166667\`
     );
   }
 
-  private createInitDurationMetric(func: IFunction, label: string, statistic: string = 'avg'): Metric {
+  private createInitDurationMetric(func: lambda.Function, label: string, statistic: string = 'avg'): Metric {
     return new Metric({
       namespace: 'AWS/Lambda',
       metricName: 'InitDuration',
