@@ -158,4 +158,13 @@ export class KmsKeyManaged extends Construct implements kms.IKey {
       }
     }
   }
+
+  /**
+   * Access to the underlying kms.Key for advanced use cases
+   *
+   * @internal
+   */
+  public get key(): kms.Key {
+    return this._key;
+  }
 }

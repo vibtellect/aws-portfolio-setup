@@ -186,4 +186,13 @@ export class SqsQueueEncrypted extends Construct implements sqs.IQueue {
     const isDev = devPatterns.some((pattern) => stackName.includes(pattern));
     return isDev ? cdk.RemovalPolicy.DESTROY : cdk.RemovalPolicy.RETAIN;
   }
+
+  /**
+   * Access to the underlying sqs.Queue for advanced use cases
+   *
+   * @internal
+   */
+  public get queue(): sqs.Queue {
+    return this._queue;
+  }
 }

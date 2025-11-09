@@ -117,6 +117,7 @@ export class ApiGatewayRestApiStandard extends Construct implements apigateway.I
   public readonly restApiId: string;
   public readonly restApiName: string;
   public readonly restApiRootResourceId: string;
+  public readonly restApiRef: apigateway.RestApiReference;
   public readonly root: apigateway.IResource;
   public readonly url: string;
   public readonly deploymentStage: apigateway.Stage;
@@ -205,6 +206,9 @@ export class ApiGatewayRestApiStandard extends Construct implements apigateway.I
     this.restApiId = this._restApi.restApiId;
     this.restApiName = this._restApi.restApiName;
     this.restApiRootResourceId = this._restApi.restApiRootResourceId;
+    this.restApiRef = {
+      restApiId: this._restApi.restApiId,
+    };
     this.root = this._restApi.root;
     this.url = this._restApi.url;
     this.deploymentStage = this._restApi.deploymentStage;
@@ -229,8 +233,8 @@ export class ApiGatewayRestApiStandard extends Construct implements apigateway.I
   // IRestApi INTERFACE METHODS - Grant Permissions
   // ========================================
 
-  public grantExecute(identity: iam.IGrantable, options?: apigateway.ExecuteApiGrantOptions): iam.Grant {
-    return (this._restApi as any).grantExecute(identity, options);
+  public grantExecute(identity: iam.IGrantable): iam.Grant {
+    return (this._restApi as any).grantExecute(identity);
   }
 
   // ========================================

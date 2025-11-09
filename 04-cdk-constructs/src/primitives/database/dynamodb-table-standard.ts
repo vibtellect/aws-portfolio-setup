@@ -508,4 +508,17 @@ export class DynamoDbTableStandard extends Construct implements dynamodb.ITable 
     // Dev/Test Stack → DESTROY
     return cdk.RemovalPolicy.DESTROY;
   }
+
+  // ========================================
+  // ADDITIONAL METHODS
+  // ========================================
+
+  /**
+   * Access to the underlying dynamodb.Table for advanced use cases
+   *
+   * @internal
+   */
+  public get table(): dynamodb.Table {
+    return this._table;
+  }
 }

@@ -126,12 +126,12 @@ export class S3BucketSecure extends Construct implements s3.IBucket {
 
   public readonly bucketArn: string;
   public readonly bucketName: string;
+  public readonly bucketRef: s3.BucketReference;
   public readonly bucketDomainName: string;
   public readonly bucketWebsiteUrl: string;
   public readonly bucketWebsiteDomainName: string;
   public readonly bucketRegionalDomainName: string;
   public readonly bucketDualStackDomainName: string;
-  public readonly bucketWebsiteNewUrlFormat: boolean;
   public readonly encryptionKey?: kms.IKey;
   public readonly isWebsite?: boolean;
   public readonly policy?: s3.BucketPolicy;
@@ -215,12 +215,15 @@ export class S3BucketSecure extends Construct implements s3.IBucket {
 
     this.bucketArn = this._bucket.bucketArn;
     this.bucketName = this._bucket.bucketName;
+    this.bucketRef = {
+      bucketArn: this._bucket.bucketArn,
+      bucketName: this._bucket.bucketName,
+    };
     this.bucketDomainName = this._bucket.bucketDomainName;
     this.bucketWebsiteUrl = this._bucket.bucketWebsiteUrl;
     this.bucketWebsiteDomainName = this._bucket.bucketWebsiteDomainName;
     this.bucketRegionalDomainName = this._bucket.bucketRegionalDomainName;
     this.bucketDualStackDomainName = this._bucket.bucketDualStackDomainName;
-    this.bucketWebsiteNewUrlFormat = this._bucket.bucketWebsiteNewUrlFormat;
     this.encryptionKey = this._bucket.encryptionKey;
     this.isWebsite = this._bucket.isWebsite;
     this.policy = this._bucket.policy;
@@ -340,6 +343,34 @@ export class S3BucketSecure extends Construct implements s3.IBucket {
 
   public enableEventBridgeNotification(): void {
     this._bucket.enableEventBridgeNotification();
+  }
+
+  // ========================================
+  // IBucket INTERFACE METHODS - CloudTrail
+  // ========================================
+
+  public onCloudTrailEvent(id: string, options?: any): any {
+    return this._bucket.onCloudTrailEvent(id, options);
+  }
+
+  public onCloudTrailPutObject(id: string, options?: any): any {
+    return this._bucket.onCloudTrailPutObject(id, options);
+  }
+
+  public onCloudTrailWriteObject(id: string, options?: any): any {
+    return this._bucket.onCloudTrailWriteObject(id, options);
+  }
+
+  // ========================================
+  // IBucket INTERFACE METHODS - Replication
+  // ========================================
+
+  public grantReplicationPermission(grantee: iam.IGrantable): iam.Grant {
+    return (this._bucket as any).grantReplicationPermission(grantee);
+  }
+
+  public addReplicationPolicy(roleArn: string, accessControlTransition?: boolean, account?: string): void {
+    (this._bucket as any).addReplicationPolicy(roleArn, accessControlTransition, account);
   }
 
   // ========================================
