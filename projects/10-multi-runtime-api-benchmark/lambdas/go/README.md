@@ -110,17 +110,93 @@ All endpoints from the main API are supported:
 
 ## Testing
 
+The Go Lambda includes comprehensive tests for all components:
+
+### Test Structure
+
+```
+go/
+├── internal/
+│   ├── models/
+│   │   └── item_test.go          # Model tests (85+ tests)
+│   └── utils/
+│       ├── dynamodb_test.go       # DynamoDB client tests
+│       └── metrics_test.go        # Metrics collector tests (25+ tests)
+└── cmd/
+    └── main_test.go                # Handler and route tests (30+ tests)
+```
+
+### Running Tests
+
 ```bash
-# Run tests
+# Run all tests
 go test -v ./...
 
-# With coverage
+# Run tests with coverage
 go test -v -cover ./...
 
 # Generate coverage report
 go test -v -coverprofile=coverage.out ./...
 go tool cover -html=coverage.out
+
+# Run specific test package
+go test -v ./internal/models
+go test -v ./internal/utils
+go test -v ./cmd
+
+# Run specific test
+go test -v -run TestItemJSONMarshaling ./internal/models
 ```
+
+### Test Coverage
+
+The test suite includes:
+
+**Model Tests (`internal/models/item_test.go`):**
+- JSON serialization/deserialization for all models
+- Validation logic for ItemCreate and ItemUpdate
+- Response object tests (ItemResponse, ErrorResponse, ItemListResponse)
+- Timestamp generation and format tests
+
+**Metrics Tests (`internal/utils/metrics_test.go`):**
+- MetricsCollector initialization and configuration
+- Cold start tracking across multiple invocations
+- Memory metrics collection and validation
+- Lambda context detection and population
+- Concurrent metrics collection
+- JSON serialization/deserialization
+
+**DynamoDB Tests (`internal/utils/dynamodb_test.go`):**
+- Client initialization with custom and default table names
+- Validation logic for create and update operations
+- Item structure and timestamp validation
+- Price and limit validation
+
+**Handler Tests (`cmd/main_test.go`):**
+- Health check endpoints
+- Metrics endpoints
+- CRUD operation handlers with validation
+- Error handling and response structures
+- CORS middleware
+- Gin framework integration
+
+### Continuous Testing
+
+```bash
+# Watch mode (requires entr or similar)
+find . -name "*.go" | entr -c go test -v ./...
+
+# Run tests before commit
+go test ./... && git commit
+```
+
+### Test Best Practices
+
+- Use table-driven tests for multiple scenarios
+- Mock external dependencies (DynamoDB, AWS SDK)
+- Test both success and error paths
+- Validate all response structures
+- Check edge cases and validation logic
 
 ## Performance Characteristics
 

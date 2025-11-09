@@ -107,20 +107,151 @@ All endpoints from the main API are supported:
 
 ## Testing
 
+The Kotlin Lambda includes comprehensive tests using JUnit 5 and Ktor's testing utilities:
+
+### Test Structure
+
+```
+kotlin/src/test/kotlin/com/vibtellect/benchmark/
+├── models/
+│   └── ItemTest.kt                    # Model tests (45+ tests)
+├── utils/
+│   ├── DynamoDBClientTest.kt          # DynamoDB client tests (50+ tests)
+│   └── MetricsCollectorTest.kt        # Metrics collector tests (30+ tests)
+└── ApplicationTest.kt                  # Route and integration tests (40+ tests)
+```
+
+### Running Tests
+
 ```bash
 # Run all tests
 ./gradlew test
 
-# With detailed output
+# Run with detailed output
 ./gradlew test --info
 
-# Continuous testing
+# Continuous testing (watch mode)
 ./gradlew test --continuous
 
-# Generate test report
-./gradlew test
-open build/reports/tests/test/index.html
+# Run specific test class
+./gradlew test --tests "ItemTest"
+./gradlew test --tests "MetricsCollectorTest"
+./gradlew test --tests "ApplicationTest"
+
+# Run specific test method
+./gradlew test --tests "ItemTest.should serialize complete item to JSON"
+
+# Generate test coverage report (with JaCoCo)
+./gradlew test jacocoTestReport
+open build/reports/jacoco/test/html/index.html
+
+# Clean and test
+./gradlew clean test
 ```
+
+### Test Reports
+
+After running tests, view the HTML report:
+
+```bash
+# Test results
+open build/reports/tests/test/index.html
+
+# Coverage report (if JaCoCo configured)
+open build/reports/jacoco/test/html/index.html
+```
+
+### Test Coverage
+
+The test suite includes:
+
+**Model Tests (`models/ItemTest.kt`):**
+- Item, ItemCreate, ItemUpdate serialization/deserialization
+- Validation logic for all input models
+- Response objects (ItemResponse, ErrorResponse, ItemListResponse)
+- Timestamp generation and validation
+- Round-trip JSON serialization
+- Null and optional field handling
+
+**Metrics Tests (`utils/MetricsCollectorTest.kt`):**
+- MetricsCollector initialization with custom/default runtime names
+- Cold start tracking mechanism
+- Memory metrics collection (heap used, max, total)
+- Uptime calculation
+- Lambda context detection and population
+- Kotlin and JVM version information
+- JSON serialization/deserialization of all metric types
+- Multiple collector instances and shared state
+
+**DynamoDB Tests (`utils/DynamoDBClientTest.kt`):**
+- Table name configuration (custom and default)
+- Input validation for ItemCreate and ItemUpdate
+- Item structure and field validation
+- Timestamp generation and format
+- Price validation (positive, zero, negative)
+- UUID generation and format
+- Query limit handling
+
+**Application Tests (`ApplicationTest.kt`):**
+- Health check endpoints (`/health`, `/kotlin/health`)
+- Metrics endpoints (`/metrics`, `/kotlin/metrics`)
+- CRUD operations with validation
+  - POST /items (with validation errors)
+  - GET /items (with query parameters)
+  - GET /items/:id
+  - PUT /items/:id
+  - DELETE /items/:id
+- Kotlin-prefixed routes (`/kotlin/items/*`)
+- CORS configuration
+- Content negotiation (JSON)
+- Error handling and error responses
+
+### Test Best Practices
+
+The tests follow these principles:
+
+1. **Nested Test Classes**: Using `@Nested` inner classes for logical grouping
+2. **Descriptive Names**: Test names clearly describe what they test
+3. **Table-Driven Tests**: Multiple scenarios in single test methods
+4. **Ktor Testing DSL**: Using `testApplication` for route testing
+5. **Mocking**: External dependencies (DynamoDB, AWS SDK) handled gracefully
+6. **Edge Cases**: Testing validation, errors, and boundary conditions
+7. **JSON Round-Trips**: Ensuring serialization consistency
+
+### Continuous Integration
+
+```bash
+# Pre-commit test hook
+./gradlew test && git commit
+
+# CI pipeline test command
+./gradlew clean test --info
+```
+
+### Debugging Tests
+
+```bash
+# Run tests with debug logging
+./gradlew test --debug
+
+# Run single test with stacktrace
+./gradlew test --tests "ItemTest" --stacktrace
+
+# Run tests with JVM debugging enabled
+./gradlew test --debug-jvm
+```
+
+### Test Configuration
+
+Tests use JUnit 5 Platform with these dependencies:
+
+```kotlin
+testImplementation("org.jetbrains.kotlin:kotlin-test")
+testImplementation("io.ktor:ktor-server-tests:2.3.7")
+testImplementation("org.junit.jupiter:junit-jupiter:5.10.1")
+```
+
+The `useJUnitPlatform()` is configured in `build.gradle.kts` to enable JUnit 5.
 
 ## Performance Characteristics
 
