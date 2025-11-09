@@ -1,5 +1,0 @@
-#!/bin/bash
-# Placeholder for Go Lambda
-# Full implementation coming soon
-echo "Go Lambda not yet implemented"
-exit 1

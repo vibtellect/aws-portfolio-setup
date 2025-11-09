@@ -8,46 +8,51 @@ Entwicklung einer objektiven Performance-Vergleichsplattform für AWS Lambda RES
 
 ## Aktueller Status
 
-### ✅ Implementiert
-- **Python Lambda** (FastAPI + Mangum) - Vollständig funktionsfähig
-- **TypeScript Lambda** (Express + serverless-http) - Vollständig funktionsfähig
-- **Shared Infrastructure** (DynamoDB, API Gateway)
-- **CloudWatch Monitoring Dashboard**
-- **Build & Deployment Scripts**
+### ✅ Vollständig Implementiert
+- **Python Lambda** (FastAPI + Mangum) - ✅ Produktionsbereit
+- **TypeScript Lambda** (Express + serverless-http) - ✅ Produktionsbereit
+- **Go Lambda** (Gin Framework) - ✅ Produktionsbereit
+- **Kotlin Lambda** (Ktor) - ✅ Produktionsbereit
+- **Shared Infrastructure** (DynamoDB, API Gateway) - ✅
+- **CloudWatch Monitoring Dashboard** - ✅
+- **Comprehensive Test Suite** (CDK + Python + TypeScript) - ✅
+- **Build & Deployment Scripts** - ✅
 
-### 🚧 In Arbeit
-- **Go Lambda** (Gin Framework) - Geplant
-- **Kotlin Lambda** (Ktor + GraalVM) - Geplant
+### 🔮 Zukünftige Erweiterungen
 - **Performance Tests** (k6/Artillery) - Geplant
-- **Integration Tests** - Geplant
+- **Kotlin GraalVM Native Image** - Optional
+- **CI/CD Pipeline** - Geplant
+- **OpenAPI/Swagger Docs** - Geplant
 
 ## Architektur
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        API Gateway                           │
-│                    (REST API Endpoint)                       │
-└─────────┬─────────────────────────────────────────┬─────────┘
-          │                                         │
-          │                                         │
-          ▼                                         ▼
-┌─────────────────┐                      ┌─────────────────┐
-│  Python Lambda  │                      │TypeScript Lambda│
-│  (FastAPI +     │                      │ (Express +      │
-│   Mangum)       │                      │ serverless-http)│
-└────────┬────────┘                      └────────┬────────┘
-         │                                        │
-         │         ┌─────────────────┐            │
-         └────────►│  DynamoDB Table │◄───────────┘
-                   │  (Items Store)  │
-                   └─────────────────┘
-                            │
-                            ▼
-                   ┌─────────────────┐
-                   │ CloudWatch      │
-                   │ Dashboard +     │
-                   │ Metrics         │
-                   └─────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                         API Gateway                              │
+│                     (REST API Endpoint)                          │
+└────────┬──────────────┬──────────────┬──────────────┬───────────┘
+         │              │              │              │
+         ▼              ▼              ▼              ▼
+    ┌────────┐    ┌──────────┐   ┌────────┐    ┌────────┐
+    │ Python │    │TypeScript│   │   Go   │    │ Kotlin │
+    │FastAPI │    │ Express  │   │  Gin   │    │  Ktor  │
+    │+Mangum │    │+serverles│   │Framework│   │ Server │
+    └───┬────┘    └────┬─────┘   └───┬────┘    └───┬────┘
+        │              │              │             │
+        └──────────────┴──────────────┴─────────────┘
+                       │
+                       ▼
+              ┌─────────────────┐
+              │  DynamoDB Table │
+              │  (Items Store)  │
+              └────────┬────────┘
+                       │
+                       ▼
+              ┌─────────────────┐
+              │ CloudWatch      │
+              │ Dashboard +     │
+              │ Metrics         │
+              └─────────────────┘
 ```
 
 ## API Endpoints
@@ -92,6 +97,22 @@ Alle Runtimes implementieren identische REST API Endpoints:
 - **Build**: TypeScript + esbuild
 - **Type Safety**: Full TypeScript strict mode
 
+### Go Lambda
+- **Runtime**: Go 1.21 (PROVIDED_AL2)
+- **Framework**: Gin Web Framework
+- **Lambda Adapter**: AWS Lambda Go API Proxy
+- **AWS SDK**: AWS SDK for Go v1
+- **Build**: Cross-compilation für Linux AMD64
+- **Performance**: Native Binary, minimale Cold Starts
+
+### Kotlin Lambda
+- **Runtime**: Java 17 (PROVIDED_AL2 mit custom runtime)
+- **Framework**: Ktor 2.3
+- **Build Tool**: Gradle 8.5
+- **AWS SDK**: AWS SDK for Java v2 (Enhanced DynamoDB Client)
+- **Serialization**: kotlinx.serialization
+- **Performance**: JVM-basiert, optional GraalVM Native Image
+
 ### Infrastructure (CDK)
 - **Language**: TypeScript
 - **CDK Constructs**: @vibtellect/aws-cdk-constructs
@@ -129,8 +150,20 @@ Alle Runtimes implementieren identische REST API Endpoints:
 │   │   │   └── utils/
 │   │   ├── package.json
 │   │   └── tsconfig.json
-│   ├── go/                        # Go + Gin (geplant)
-│   └── kotlin/                    # Kotlin + Ktor (geplant)
+│   ├── go/                        # Go + Gin
+│   │   ├── cmd/main.go
+│   │   ├── internal/
+│   │   │   ├── models/
+│   │   │   └── utils/
+│   │   ├── go.mod
+│   │   └── Makefile
+│   └── kotlin/                    # Kotlin + Ktor
+│       ├── src/main/kotlin/
+│       │   ├── Application.kt
+│       │   ├── models/
+│       │   └── utils/
+│       ├── build.gradle.kts
+│       └── settings.gradle.kts
 ├── scripts/                       # Build & Deployment
 │   ├── build-all.sh
 │   ├── build-python.sh
@@ -143,9 +176,11 @@ Alle Runtimes implementieren identische REST API Endpoints:
 
 - **AWS Account** mit ausreichenden Berechtigungen
 - **AWS CLI** konfiguriert
-- **Node.js** >= 18.0.0
+- **Node.js** >= 18.0.0 (für CDK und TypeScript Lambda)
 - **npm** >= 9.0.0
-- **Python** >= 3.11
+- **Python** >= 3.11 (für Python Lambda)
+- **Go** >= 1.21 (für Go Lambda)
+- **Java** >= 17 + **Gradle** >= 8.5 (für Kotlin Lambda)
 - **AWS CDK** >= 2.120.0
 
 ## Installation
@@ -172,6 +207,19 @@ cd lambdas/typescript
 npm install
 ```
 
+#### Go Lambda Dependencies
+```bash
+cd lambdas/go
+go mod download
+go mod tidy
+```
+
+#### Kotlin Lambda Dependencies
+```bash
+cd lambdas/kotlin
+./gradlew build  # Downloads dependencies automatically
+```
+
 ### 2. Build
 
 Alle Lambdas bauen:
@@ -182,6 +230,9 @@ Alle Lambdas bauen:
 Oder einzeln:
 ```bash
 ./scripts/build-python.sh
+./scripts/build-typescript.sh
+./scripts/build-go.sh
+./scripts/build-kotlin.sh
 ./scripts/build-typescript.sh
 ```
 

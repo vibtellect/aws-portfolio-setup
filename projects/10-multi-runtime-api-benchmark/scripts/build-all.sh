@@ -23,12 +23,16 @@ bash "$SCRIPT_DIR/build-typescript.sh"
 echo "✅ TypeScript Lambda built successfully"
 echo ""
 
-# Build Go Lambda (placeholder)
-echo "⏭️  Skipping Go Lambda (not yet implemented)"
+# Build Go Lambda
+echo "📦 Building Go Lambda..."
+bash "$SCRIPT_DIR/build-go.sh"
+echo "✅ Go Lambda built successfully"
 echo ""
 
-# Build Kotlin Lambda (placeholder)
-echo "⏭️  Skipping Kotlin Lambda (not yet implemented)"
+# Build Kotlin Lambda
+echo "📦 Building Kotlin Lambda..."
+bash "$SCRIPT_DIR/build-kotlin.sh"
+echo "✅ Kotlin Lambda built successfully"
 echo ""
 
 echo "========================================="
