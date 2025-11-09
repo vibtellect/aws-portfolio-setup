@@ -17,6 +17,7 @@ module.exports = {
     '!**/examples/**',
     '!**/*.d.ts',
     '!**/.construct-template/**',
+    '!**/src/index.ts', // Exclude index.ts (only contains exports)
   ],
 
   coverageThreshold: {
