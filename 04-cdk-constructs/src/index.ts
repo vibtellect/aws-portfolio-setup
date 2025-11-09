@@ -33,3 +33,24 @@ export type { SqsQueueEncryptedProps } from './primitives/messaging/sqs-queue-en
 
 export { SnsTopicEncrypted } from './primitives/messaging/sns-topic-encrypted';
 export type { SnsTopicEncryptedProps } from './primitives/messaging/sns-topic-encrypted';
+
+// ============================================================================
+// PRIMITIVES - Database
+// ============================================================================
+
+export { DynamoDbTableStandard } from './primitives/database/dynamodb-table-standard';
+export type { DynamoDbTableStandardProps } from './primitives/database/dynamodb-table-standard';
+
+// ============================================================================
+// PRIMITIVES - Compute
+// ============================================================================
+
+export { LambdaFunctionSecure } from './primitives/compute/lambda-function-secure';
+export type { LambdaFunctionSecureProps } from './primitives/compute/lambda-function-secure';
+
+// ============================================================================
+// PRIMITIVES - Storage
+// ============================================================================
+
+export { S3BucketSecure } from './primitives/storage/s3-bucket-secure';
+export type { S3BucketSecureProps } from './primitives/storage/s3-bucket-secure';
