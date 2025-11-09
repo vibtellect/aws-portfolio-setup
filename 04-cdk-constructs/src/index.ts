@@ -75,3 +75,13 @@ export type { ApiGatewayRestApiStandardProps } from './primitives/api/api-gatewa
 
 export { CloudFrontDistributionSecure } from './primitives/cdn/cloudfront-distribution-secure';
 export type { CloudFrontDistributionSecureProps } from './primitives/cdn/cloudfront-distribution-secure';
+
+// ============================================================================
+// PRIMITIVES - Networking (Route53)
+// ============================================================================
+
+export { Route53HostedZoneStandard } from './primitives/networking/route53-hosted-zone-standard';
+export type { Route53HostedZoneStandardProps, VpcConfig } from './primitives/networking/route53-hosted-zone-standard';
+
+export { Route53RecordSetStandard } from './primitives/networking/route53-record-set-standard';
+export type { Route53RecordSetStandardProps, GeoLocation } from './primitives/networking/route53-record-set-standard';
