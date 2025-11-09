@@ -1,4 +1,4 @@
-.PHONY: build clean test deps
+.PHONY: all build build-local clean test test-coverage deps run fmt lint
 
 # Build for Lambda (Linux ARM64)
 build:
