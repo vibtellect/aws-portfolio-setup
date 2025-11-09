@@ -1,3 +1,4 @@
+import * as cdk from 'aws-cdk-lib';
 import * as route53 from 'aws-cdk-lib/aws-route53';
 import { Construct } from 'constructs';
 
@@ -139,24 +140,28 @@ export class Route53HostedZoneStandard extends Construct {
     // Normalize zone name - add trailing dot if not present
     const normalizedZoneName = props.zoneName.endsWith('.') ? props.zoneName : `${props.zoneName}.`;
 
-    // Build tags array
-    const tags: Array<{ key: string; value: string }> = [
-      { key: 'ManagedBy', value: 'CDK' },
-      { key: 'Construct', value: 'Route53HostedZoneStandard' }
-    ];
+    // Build query logging config
+    const queryLoggingConfig = props.enableQueryLogging && props.queryLoggingLogGroupArn
+      ? { cloudWatchLogsLogGroupArn: props.queryLoggingLogGroupArn }
+      : undefined;
 
-    if (props.tags) {
-      Object.entries(props.tags).forEach(([key, value]) => {
-        tags.push({ key, value });
-      });
-    }
-
-    // Create the L1 construct with tags
+    // Create the L1 construct
     const cfnZone = new route53.CfnHostedZone(this, 'HostedZone', {
       name: normalizedZoneName,
       hostedZoneConfig,
       vpcs,
-      hostedZoneTags: tags
+      queryLoggingConfig
+    });
+
+    // Apply tags using CDK Tags API
+    const tagConfig: Record<string, string> = {
+      'managed-by': 'aws-cdk',
+      'construct': 'route53-hosted-zone-standard',
+      ...(props.tags ?? {})
+    };
+
+    Object.entries(tagConfig).forEach(([key, value]) => {
+      cdk.Tags.of(cfnZone).add(key, value);
     });
 
     // Create IHostedZone from CfnHostedZone
@@ -169,13 +174,6 @@ export class Route53HostedZoneStandard extends Construct {
     this.hostedZoneId = this.hostedZone.hostedZoneId;
     this.zoneName = props.zoneName;
     this.hostedZoneNameServers = cfnZone.attrNameServers;
-
-    // NOTE: Query logging is not yet supported in this CDK version
-    // CfnQueryLoggingConfig does not exist in aws-cdk-lib@2.222.0
-    // This feature will be added when CDK supports it
-    if (props.enableQueryLogging && props.queryLoggingLogGroupArn) {
-      console.warn('Query logging is requested but not yet supported in this CDK version');
-    }
   }
 
   /**
@@ -213,9 +211,9 @@ export class Route53HostedZoneStandard extends Construct {
       );
     }
 
-    // Validate log group ARN format
+    // Validate log group ARN format and region
     if (props.queryLoggingLogGroupArn) {
-      const arnPattern = /^arn:aws:logs:[a-z0-9-]+:\d{12}:log-group:.+$/;
+      const arnPattern = /^arn:aws:logs:([a-z0-9-]+):\d{12}:log-group:.+$/;
       if (!arnPattern.test(props.queryLoggingLogGroupArn)) {
         throw new Error(
           `Invalid log group ARN format. ` +
@@ -223,6 +221,23 @@ export class Route53HostedZoneStandard extends Construct {
           `Got: ${props.queryLoggingLogGroupArn}`
         );
       }
+
+      // Route 53 query logging requires log group in us-east-1
+      const arnRegion = props.queryLoggingLogGroupArn.match(arnPattern)![1];
+      if (arnRegion !== 'us-east-1') {
+        throw new Error(
+          `Route 53 query logging requires CloudWatch log group in us-east-1. ` +
+          `Detected region: ${arnRegion}.`
+        );
+      }
+    }
+
+    // Validate query logging is only for public zones
+    if (props.enableQueryLogging && props.vpcs && props.vpcs.length > 0) {
+      throw new Error(
+        'Query logging is only supported for public hosted zones. ' +
+        'Remove VPC associations if enableQueryLogging is true.'
+      );
     }
   }
 }

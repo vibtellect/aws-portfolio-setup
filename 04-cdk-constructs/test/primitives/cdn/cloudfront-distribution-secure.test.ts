@@ -410,7 +410,7 @@ describe('CloudFrontDistributionSecure', () => {
     const template = Template.fromStack(devStack);
     const distribution = template.findResources('AWS::CloudFront::Distribution');
     const resource = Object.values(distribution)[0];
-    expect(resource.DeletionPolicy).toBeUndefined(); // CloudFront doesn't support DeletionPolicy
+    expect(resource.DeletionPolicy).toBe('Delete'); // Dev stacks use Delete policy for cleanup
   });
 
   test('uses RETAIN removal policy for production stacks', () => {
@@ -424,7 +424,9 @@ describe('CloudFrontDistributionSecure', () => {
     });
 
     const template = Template.fromStack(prodStack);
-    template.resourceCountIs('AWS::CloudFront::Distribution', 1);
+    const distribution = template.findResources('AWS::CloudFront::Distribution');
+    const resource = Object.values(distribution)[0];
+    expect(resource.DeletionPolicy).toBe('Retain'); // Production stacks use Retain policy for safety
   });
 
   test('adds managed-by and construct tags', () => {

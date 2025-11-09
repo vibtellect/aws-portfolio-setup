@@ -47,7 +47,21 @@ jobs:
         run: |
           echo "## Code Coverage Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          cat coverage/coverage-summary.txt >> $GITHUB_STEP_SUMMARY || echo "Coverage summary not available" >> $GITHUB_STEP_SUMMARY
+          if [ -f coverage/coverage-summary.json ]; then
+            node -e "
+              const fs = require('fs');
+              const summary = JSON.parse(fs.readFileSync('coverage/coverage-summary.json', 'utf8'));
+              const total = summary.total;
+              console.log('| Metric | Coverage |');
+              console.log('|--------|----------|');
+              console.log('| Statements | ' + total.statements.pct + '% |');
+              console.log('| Branches | ' + total.branches.pct + '% |');
+              console.log('| Functions | ' + total.functions.pct + '% |');
+              console.log('| Lines | ' + total.lines.pct + '% |');
+            " >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Coverage summary not available" >> $GITHUB_STEP_SUMMARY
+          fi
 
       - name: Comment PR with coverage
         if: github.event_name == 'pull_request'

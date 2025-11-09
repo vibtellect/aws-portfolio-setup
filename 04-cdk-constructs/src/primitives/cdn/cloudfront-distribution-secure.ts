@@ -241,6 +241,7 @@ export class CloudFrontDistributionSecure extends Construct {
 
     // Apply removal policy
     const removalPolicy = props.removalPolicy ?? this.determineRemovalPolicy();
+    this.distribution.applyRemovalPolicy(removalPolicy);
     cdk.Tags.of(this.distribution).add('RemovalPolicy', removalPolicy.toString());
   }
 

@@ -161,8 +161,8 @@ describe('Route53HostedZoneStandard', () => {
     const tagMap = Object.fromEntries(tags.map((t: any) => [t.Key, t.Value]));
 
     // Check that default tags are present
-    expect(tagMap['ManagedBy']).toBe('CDK');
-    expect(tagMap['Construct']).toBe('Route53HostedZoneStandard');
+    expect(tagMap['managed-by']).toBe('aws-cdk');
+    expect(tagMap['construct']).toBe('route53-hosted-zone-standard');
   });
 
   test('allows custom tags', () => {
