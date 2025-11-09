@@ -154,18 +154,34 @@ export class DynamoDBService {
     }
   }
 
-  async listItems(limit: number = 100): Promise<Item[]> {
+  /**
+   * Lists items with optional pagination support
+   *
+   * @param limit - Maximum number of items to return (default: 100)
+   * @param exclusiveStartKey - Optional key to start scanning from (for pagination)
+   * @returns Tuple of [items, lastEvaluatedKey] where lastEvaluatedKey is undefined if no more items
+   */
+  async listItems(
+    limit: number = 100,
+    exclusiveStartKey?: Record<string, any>
+  ): Promise<[Item[], Record<string, any> | undefined]> {
     try {
+      const actualLimit = limit > 0 ? limit : 100;
+
       const response = await this.client.send(
         new ScanCommand({
           TableName: this.tableName,
-          Limit: limit,
+          Limit: actualLimit,
+          ExclusiveStartKey: exclusiveStartKey,
         })
       );
 
       const items = (response.Items || []).map((item) => unmarshall(item) as Item);
-      console.log(`Listed ${items.length} items`);
-      return items;
+      const lastEvaluatedKey = response.LastEvaluatedKey;
+      const hasMore = lastEvaluatedKey !== undefined;
+
+      console.log(`Listed ${items.length} items (hasMore: ${hasMore})`);
+      return [items, lastEvaluatedKey];
     } catch (error) {
       console.error(`Error listing items:`, error);
       throw error;

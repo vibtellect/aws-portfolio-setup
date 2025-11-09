@@ -344,7 +344,8 @@ app.delete('/typescript/items/:id', async (req, res) => {
 app.get('/items', async (req, res) => {
   try {
     const limit = parseInt(req.query.limit as string) || 100;
-    const items = await dbService.listItems(limit);
+    // TODO: Add pagination support with query parameter for exclusiveStartKey
+    const [items] = await dbService.listItems(limit, undefined);
 
     res.json({
       success: true,
@@ -365,7 +366,8 @@ app.get('/items', async (req, res) => {
 app.get('/typescript/items', async (req, res) => {
   try {
     const limit = parseInt(req.query.limit as string) || 100;
-    const items = await dbService.listItems(limit);
+    // TODO: Add pagination support with query parameter for exclusiveStartKey
+    const [items] = await dbService.listItems(limit, undefined);
 
     res.json({
       success: true,

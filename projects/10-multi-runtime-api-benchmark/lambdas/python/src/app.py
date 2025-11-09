@@ -172,7 +172,8 @@ async def delete_item(item_id: str):
 async def list_items(limit: int = 100):
     """List all items with optional limit"""
     try:
-        items = db_client.list_items(limit=limit)
+        # TODO: Add pagination support with query parameter for exclusive_start_key
+        items, _ = db_client.list_items(limit=limit, exclusive_start_key=None)
         return ItemListResponse(
             success=True,
             data=items,

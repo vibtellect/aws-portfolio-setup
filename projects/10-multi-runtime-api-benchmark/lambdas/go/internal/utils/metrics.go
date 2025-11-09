@@ -4,12 +4,14 @@ import (
 	"log"
 	"os"
 	"runtime"
+	"sync"
 	"time"
 )
 
 var (
-	coldStart  = true
-	startTime  = time.Now()
+	coldStartMu sync.Mutex
+	coldStart   = true
+	startTime   = time.Now()
 )
 
 // MetricsCollector collects runtime metrics
@@ -26,8 +28,11 @@ func NewMetricsCollector() *MetricsCollector {
 		runtimeName = "go"
 	}
 
+	// Thread-safe access to coldStart variable
+	coldStartMu.Lock()
 	isColdStart := coldStart
 	coldStart = false // Subsequent invocations are warm starts
+	coldStartMu.Unlock()
 
 	return &MetricsCollector{
 		RuntimeName: runtimeName,

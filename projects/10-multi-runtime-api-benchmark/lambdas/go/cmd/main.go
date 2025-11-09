@@ -228,7 +228,8 @@ func listItemsHandler(c *gin.Context) {
 		limit = 100
 	}
 
-	items, err := dbClient.ListItems(limit)
+	// TODO: Add pagination support with query parameter for exclusiveStartKey
+	items, _, err := dbClient.ListItems(limit, nil)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
 			Success: false,

@@ -211,24 +211,26 @@ func (db *DynamoDBClient) DeleteItem(itemID string) (bool, error) {
 	return true, nil
 }
 
-// ListItems lists all items with optional limit
-func (db *DynamoDBClient) ListItems(limit int64) ([]models.Item, error) {
+// ListItems lists all items with optional limit and pagination support
+// Returns items, lastEvaluatedKey for pagination, and error
+func (db *DynamoDBClient) ListItems(limit int64, exclusiveStartKey map[string]*dynamodb.AttributeValue) ([]models.Item, map[string]*dynamodb.AttributeValue, error) {
 	if limit <= 0 {
 		limit = 100
 	}
 
 	input := &dynamodb.ScanInput{
-		TableName: aws.String(db.tableName),
-		Limit:     aws.Int64(limit),
+		TableName:         aws.String(db.tableName),
+		Limit:             aws.Int64(limit),
+		ExclusiveStartKey: exclusiveStartKey,
 	}
 
 	result, err := db.client.Scan(input)
 	if err != nil {
 		log.Printf("Error listing items: %v", err)
-		return nil, err
+		return nil, nil, err
 	}
 
-	items := make([]models.Item, 0)
+	items := make([]models.Item, 0, len(result.Items))
 	for _, i := range result.Items {
 		var item models.Item
 		err = dynamodbattribute.UnmarshalMap(i, &item)
@@ -239,6 +241,6 @@ func (db *DynamoDBClient) ListItems(limit int64) ([]models.Item, error) {
 		items = append(items, item)
 	}
 
-	log.Printf("Listed %d items", len(items))
-	return items, nil
+	log.Printf("Listed %d items (hasMore: %v)", len(items), len(result.LastEvaluatedKey) > 0)
+	return items, result.LastEvaluatedKey, nil
 }

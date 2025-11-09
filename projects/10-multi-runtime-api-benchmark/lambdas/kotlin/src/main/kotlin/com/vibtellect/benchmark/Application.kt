@@ -168,7 +168,8 @@ private fun Route.itemsRoutes() {
     get {
         try {
             val limit = call.request.queryParameters["limit"]?.toIntOrNull() ?: 100
-            val items = dbClient.listItems(limit)
+            // TODO: Add pagination support with query parameter for exclusiveStartKey
+            val (items, _) = dbClient.listItems(limit, null)
 
             call.respond(
                 ItemListResponse(

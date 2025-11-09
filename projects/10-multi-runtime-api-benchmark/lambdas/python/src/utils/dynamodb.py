@@ -128,13 +128,36 @@ class DynamoDBClient:
             logger.error(f"Error deleting item {item_id}: {e}")
             raise
 
-    def list_items(self, limit: int = 100) -> List[Item]:
-        """List all items (with pagination support)"""
+    def list_items(
+        self,
+        limit: int = 100,
+        exclusive_start_key: Optional[dict] = None
+    ) -> tuple[List[Item], Optional[dict]]:
+        """
+        List items with optional pagination support
+
+        Args:
+            limit: Maximum number of items to return (default: 100)
+            exclusive_start_key: Optional key to start scanning from (for pagination)
+
+        Returns:
+            Tuple of (items, last_evaluated_key) where last_evaluated_key is None if no more items
+        """
         try:
-            response = self.table.scan(Limit=limit)
+            actual_limit = limit if limit > 0 else 100
+
+            scan_kwargs = {'Limit': actual_limit}
+            if exclusive_start_key:
+                scan_kwargs['ExclusiveStartKey'] = exclusive_start_key
+
+            response = self.table.scan(**scan_kwargs)
             items = [Item(**item) for item in response.get('Items', [])]
-            logger.info(f"Listed {len(items)} items")
-            return items
+            last_evaluated_key = response.get('LastEvaluatedKey')
+
+            has_more = last_evaluated_key is not None
+            logger.info(f"Listed {len(items)} items (hasMore: {has_more})")
+
+            return items, last_evaluated_key
         except ClientError as e:
             logger.error(f"Error listing items: {e}")
             raise

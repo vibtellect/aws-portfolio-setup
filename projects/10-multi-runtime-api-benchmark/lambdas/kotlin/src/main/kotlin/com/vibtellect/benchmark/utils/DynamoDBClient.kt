@@ -9,6 +9,7 @@ import software.amazon.awssdk.enhanced.dynamodb.Key
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema
 import software.amazon.awssdk.enhanced.dynamodb.model.ScanEnhancedRequest
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient as AwsDynamoDbClient
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue
 
 private val logger = KotlinLogging.logger {}
 
@@ -108,18 +109,46 @@ class DynamoDBClient(tableName: String? = null) {
         }
     }
 
-    fun listItems(limit: Int = 100): List<Item> {
+    /**
+     * Lists items with optional pagination support
+     *
+     * @param limit Maximum number of items to return (default: 100)
+     * @param exclusiveStartKey Optional key to start scanning from (for pagination)
+     * @return Pair of (items, lastEvaluatedKey) where lastEvaluatedKey is null if no more items
+     */
+    fun listItems(
+        limit: Int = 100,
+        exclusiveStartKey: Map<String, AttributeValue>? = null
+    ): Pair<List<Item>, Map<String, AttributeValue>?> {
         return try {
-            val request = ScanEnhancedRequest.builder()
-                .limit(limit)
-                .build()
+            val actualLimit = if (limit > 0) limit else 100
 
-            val items = table.scan(request)
-                .items()
-                .toList()
+            val requestBuilder = ScanEnhancedRequest.builder()
+                .limit(actualLimit)
 
-            logger.info { "Listed ${items.size} items" }
-            items
+            // Add exclusiveStartKey if provided
+            if (exclusiveStartKey != null) {
+                requestBuilder.exclusiveStartKey(exclusiveStartKey)
+            }
+
+            val request = requestBuilder.build()
+
+            // Scan and get first page
+            val scanResult = table.scan(request).iterator()
+
+            val items = mutableListOf<Item>()
+            var lastEvaluatedKey: Map<String, AttributeValue>? = null
+
+            if (scanResult.hasNext()) {
+                val page = scanResult.next()
+                items.addAll(page.items())
+                lastEvaluatedKey = page.lastEvaluatedKey()
+            }
+
+            val hasMore = lastEvaluatedKey != null && lastEvaluatedKey.isNotEmpty()
+            logger.info { "Listed ${items.size} items (hasMore: $hasMore)" }
+
+            Pair(items, if (hasMore) lastEvaluatedKey else null)
         } catch (e: Exception) {
             logger.error(e) { "Error listing items" }
             throw e
