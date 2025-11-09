@@ -96,19 +96,33 @@ new apigateway.LambdaIntegration(fn); // ✅ Funktioniert!
 
 ## Status
 
-### Kritische Constructs (für Project 10)
-- ✅ **LambdaFunctionSecure**: Vollständig implementiert → `IFunction`
-- ✅ **IamRoleLambdaBasic**: Vollständig implementiert → `IRole`
-- ✅ **DynamoDbTableStandard**: Vollständig implementiert → `ITable`
+### ✅ Implementierte Constructs
 
-### Weitere Constructs (noch ausstehend)
-- ⏳ **LogGroupShortRetention**: Benötigt `ILogGroup`
-- ⏳ **ApiGatewayRestApiStandard**: Benötigt `IRestApi`
-- ⏳ **S3BucketSecure**: Benötigt `IBucket`
-- ⏳ **SnsTopicEncrypted**: Benötigt `ITopic`
-- ⏳ **SqsQueueEncrypted**: Benötigt `IQueue`
-- ⏳ **KmsKeyManaged**: Benötigt `IKey`
-- ⏳ **Alle anderen Constructs**: Benötigen Interface-Implementierung
+#### Kritisch (für Project 10)
+- ✅ **LambdaFunctionSecure** → `IFunction` (15+ properties, 15+ methods)
+- ✅ **IamRoleLambdaBasic** → `IRole` (10+ properties, 7 methods)
+- ✅ **DynamoDbTableStandard** → `ITable` (6 properties, 17+ methods)
+- ✅ **LogGroupShortRetention** → `ILogGroup` (4 properties, 11 methods)
+
+#### Status: 4/14 Constructs fertig (~29%)
+
+### ⏳ Ausstehende Constructs
+
+#### High Priority (häufig verwendet)
+- **ApiGatewayRestApiStandard** → `IRestApi` (komplex, ~20+ methods)
+- **S3BucketSecure** → `IBucket` (komplex, ~30+ methods)
+- **KmsKeyManaged** → `IKey` (10+ grant methods)
+- **SqsQueueEncrypted** → `IQueue` (8+ methods)
+- **SnsTopicEncrypted** → `ITopic` (5+ methods)
+
+#### Medium Priority  
+- **CognitoUserPoolStandard** → `IUserPool`
+- **CloudFrontDistributionSecure** → `IDistribution`
+- **Route53HostedZoneStandard** → `IHostedZone`
+- **Route53RecordSetStandard** → `IRecordSet`
+
+#### Low Priority (weniger kritisch)
+- Weitere Constructs nach Bedarf
 
 ## Quellen
 
