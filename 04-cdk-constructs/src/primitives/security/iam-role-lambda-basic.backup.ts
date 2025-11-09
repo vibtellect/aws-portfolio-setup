@@ -112,64 +112,33 @@ export interface IamRoleLambdaBasicProps {
  * });
  * ```
  */
-export class IamRoleLambdaBasic extends Construct implements iam.IRole {
+export class IamRoleLambdaBasic extends Construct {
   /**
-   * Die innere IAM-Rolle (privat für Delegation)
+   * Die erstellte IAM-Rolle
+   *
+   * WARUM public?
+   * - Lambda-Function braucht diese Rolle
+   * - Andere Constructs müssen darauf zugreifen können
    */
-  private readonly _role: iam.Role;
-
-  // ========================================
-  // IRole INTERFACE IMPLEMENTATION
-  // ========================================
+  public readonly role: iam.Role;
 
   /**
-   * Returns the ARN of this role.
-   * @attribute
+   * ARN der Rolle
+   *
+   * WARUM extra Property?
+   * - Häufig benötigt für Cross-Account Zugriff
+   * - Für CloudFormation Outputs
    */
   public readonly roleArn: string;
 
   /**
-   * Returns the name of this role.
-   * @attribute
+   * Name der Rolle
+   *
+   * WARUM extra Property?
+   * - Für CLI-Scripts
+   * - Für Debugging in AWS Console
    */
   public readonly roleName: string;
-
-  /**
-   * The principal this IAM Role is authorized to assume.
-   */
-  public readonly assumeRoleAction: string;
-
-  /**
-   * When this Principal is used in an AssumeRole policy, the policy fragment.
-   */
-  public readonly policyFragment: iam.PrincipalPolicyFragment;
-
-  /**
-   * The AWS account ID of this principal.
-   */
-  public readonly principalAccount?: string;
-
-  /**
-   * The principal to grant permissions to.
-   */
-  public readonly grantPrincipal: iam.IPrincipal;
-
-  /**
-   * The environment this resource belongs to.
-   */
-  public readonly env: cdk.ResourceEnvironment;
-
-  /**
-   * The stack in which this resource is defined.
-   */
-  public readonly stack: cdk.Stack;
-
-  /**
-   * A reference to this Role resource.
-   */
-  public get roleRef(): iam.RoleReference {
-    return this._role.roleRef;
-  }
 
   constructor(scope: Construct, id: string, props: IamRoleLambdaBasicProps = {}) {
     super(scope, id);
@@ -184,7 +153,7 @@ export class IamRoleLambdaBasic extends Construct implements iam.IRole {
     // 2. IAM-ROLLE ERSTELLEN
     // ========================================
 
-    this._role = new iam.Role(this, 'Role', {
+    this.role = new iam.Role(this, 'Role', {
       // WARUM lambda.amazonaws.com?
       // - Lambda-Service muss diese Rolle "assume" können
       // - Standard für alle Lambda-Funktionen
@@ -206,7 +175,7 @@ export class IamRoleLambdaBasic extends Construct implements iam.IRole {
     // - CreateLogStream: Erstelle Log-Stream für Lambda-Invocation
     // - PutLogEvents: Schreibe Log-Einträge
 
-    this._role.addToPolicy(
+    this.role.addToPolicy(
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
         actions: [
@@ -234,7 +203,7 @@ export class IamRoleLambdaBasic extends Construct implements iam.IRole {
     // - Nur hinzufügen wenn explizit gewünscht
 
     if (props.enableXray) {
-      this._role.addToPolicy(
+      this.role.addToPolicy(
         new iam.PolicyStatement({
           effect: iam.Effect.ALLOW,
           actions: [
@@ -256,7 +225,7 @@ export class IamRoleLambdaBasic extends Construct implements iam.IRole {
 
     if (props.extraPolicies && props.extraPolicies.length > 0) {
       props.extraPolicies.forEach((policy) => {
-        this._role.addToPolicy(policy);
+        this.role.addToPolicy(policy);
       });
     }
 
@@ -264,75 +233,16 @@ export class IamRoleLambdaBasic extends Construct implements iam.IRole {
     // 6. TAGS
     // ========================================
 
-    cdk.Tags.of(this._role).add('ManagedBy', 'CDK');
-    cdk.Tags.of(this._role).add('Construct', 'IamRoleLambdaBasic');
-    cdk.Tags.of(this._role).add('Purpose', 'LambdaExecution');
+    cdk.Tags.of(this.role).add('ManagedBy', 'CDK');
+    cdk.Tags.of(this.role).add('Construct', 'IamRoleLambdaBasic');
+    cdk.Tags.of(this.role).add('Purpose', 'LambdaExecution');
 
     // ========================================
-    // 7. DELEGIERE IRole PROPERTIES
+    // 7. OUTPUTS
     // ========================================
 
-    this.roleArn = this._role.roleArn;
-    this.roleName = this._role.roleName;
-    this.assumeRoleAction = this._role.assumeRoleAction;
-    this.policyFragment = this._role.policyFragment;
-    this.principalAccount = this._role.principalAccount;
-    this.grantPrincipal = this._role.grantPrincipal;
-    this.env = this._role.env;
-    this.stack = this._role.stack;
-  }
-
-  // ========================================
-  // IRole INTERFACE METHODS
-  // ========================================
-
-  /**
-   * Grant the actions defined in actions to the identity Principal on this resource.
-   */
-  public grant(grantee: iam.IPrincipal, ...actions: string[]): iam.Grant {
-    return this._role.grant(grantee, ...actions);
-  }
-
-  /**
-   * Grant permissions to the given principal to pass this role.
-   */
-  public grantPassRole(grantee: iam.IPrincipal): iam.Grant {
-    return this._role.grantPassRole(grantee);
-  }
-
-  /**
-   * Grant permissions to the given principal to assume this role.
-   */
-  public grantAssumeRole(grantee: iam.IPrincipal): iam.Grant {
-    return this._role.grantAssumeRole(grantee);
-  }
-
-  /**
-   * Add to the policy of this principal.
-   */
-  public addToPrincipalPolicy(statement: iam.PolicyStatement): iam.AddToPrincipalPolicyResult {
-    return this._role.addToPrincipalPolicy(statement);
-  }
-
-  /**
-   * Attaches an inline policy to this principal.
-   */
-  public attachInlinePolicy(policy: iam.Policy): void {
-    this._role.attachInlinePolicy(policy);
-  }
-
-  /**
-   * Attaches a managed policy to this principal.
-   */
-  public addManagedPolicy(policy: iam.IManagedPolicy): void {
-    this._role.addManagedPolicy(policy);
-  }
-
-  /**
-   * Apply the given removal policy to this resource
-   */
-  public applyRemovalPolicy(policy: cdk.RemovalPolicy): void {
-    this._role.applyRemovalPolicy(policy);
+    this.roleArn = this.role.roleArn;
+    this.roleName = this.role.roleName;
   }
 
   /**
