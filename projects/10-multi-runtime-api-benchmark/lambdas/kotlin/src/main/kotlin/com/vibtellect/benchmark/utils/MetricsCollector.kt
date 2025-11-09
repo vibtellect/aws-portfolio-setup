@@ -88,7 +88,7 @@ class MetricsCollector {
         )
 
         logger.info {
-            "Collected metrics: runtime=$runtimeName, cold_start=$coldStart, uptime=${String.format("%.2f", uptimeSeconds)}s"
+            "Collected metrics: runtime=$runtimeName, cold_start=$coldStart, uptime=${String.format(java.util.Locale.US, "%.2f", uptimeSeconds)}s"
         }
 
         return metrics
