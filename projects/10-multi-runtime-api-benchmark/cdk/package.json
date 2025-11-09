@@ -1,0 +1,56 @@
+{
+  "name": "multi-runtime-api-benchmark-cdk",
+  "version": "1.0.0",
+  "description": "CDK Infrastructure for Multi-Runtime API Benchmark",
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc -w",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "cdk": "cdk",
+    "synth": "cdk synth",
+    "deploy": "cdk deploy --all",
+    "deploy:shared": "cdk deploy MultiRuntimeBenchmarkSharedStack",
+    "deploy:python": "cdk deploy MultiRuntimeBenchmarkPythonStack",
+    "deploy:typescript": "cdk deploy MultiRuntimeBenchmarkTypeScriptStack",
+    "deploy:go": "cdk deploy MultiRuntimeBenchmarkGoStack",
+    "deploy:kotlin": "cdk deploy MultiRuntimeBenchmarkKotlinStack",
+    "deploy:monitoring": "cdk deploy MultiRuntimeBenchmarkMonitoringStack",
+    "destroy": "cdk destroy --all",
+    "diff": "cdk diff",
+    "lint": "eslint . --ext .ts",
+    "format": "prettier --write \"**/*.ts\""
+  },
+  "keywords": [
+    "aws",
+    "cdk",
+    "lambda",
+    "performance",
+    "benchmark"
+  ],
+  "author": "vibtellect",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "aws-cdk": "^2.120.0",
+    "eslint": "^8.0.0",
+    "jest": "^29.5.0",
+    "prettier": "^3.0.0",
+    "ts-jest": "^29.1.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "^2.120.0",
+    "constructs": "^10.0.0",
+    "source-map-support": "^0.5.21"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}

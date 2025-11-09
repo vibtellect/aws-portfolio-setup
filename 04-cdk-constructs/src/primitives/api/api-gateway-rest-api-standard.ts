@@ -1,7 +1,8 @@
-import { Construct } from 'constructs';
+import { Construct, Node } from 'constructs';
 import * as cdk from 'aws-cdk-lib';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 
 /**
  * Properties for ApiGatewayRestApiStandard
@@ -62,10 +63,23 @@ export interface ApiGatewayRestApiStandardProps {
    * @default true
    */
   readonly cloudWatchRole?: boolean;
+
+  /**
+   * Deploy options
+   *
+   * @default - Standard deploy options
+   */
+  readonly deployOptions?: apigateway.StageOptions;
 }
 
 /**
- * API Gateway REST API mit Production Best Practices
+ * API Gateway REST API mit Production Best Practices und IRestApi Interface
+ *
+ * Diese Klasse implementiert das IRestApi Interface durch Delegation an die
+ * innere apigateway.RestApi. Das ermöglicht:
+ * - Verwendung überall wo IRestApi erwartet wird
+ * - Zugriff auf alle IRestApi Methoden
+ * - Best Practices durch opinionated Defaults
  *
  * WARUM dieser Construct?
  * 1. CloudWatch Logging: Immer aktiviert für Debugging
@@ -77,39 +91,39 @@ export interface ApiGatewayRestApiStandardProps {
  * // Einfache REST API
  * const api = new ApiGatewayRestApiStandard(this, 'Api');
  *
+ * // Kann überall verwendet werden wo IRestApi erwartet wird
+ * const resource = api.root.addResource('todos');
+ * resource.addMethod('GET', new apigateway.LambdaIntegration(fn));
+ *
  * // Mit CORS für Frontend
  * const api = new ApiGatewayRestApiStandard(this, 'Api', {
  *   corsOptions: {
  *     allowOrigins: apigateway.Cors.ALL_ORIGINS,
  *     allowMethods: apigateway.Cors.ALL_METHODS,
- *   },
+   },
  * });
- *
- * // Lambda Integration
- * api.root.addResource('todos')
- *   .addMethod('GET', new apigateway.LambdaIntegration(listFunction));
  * ```
  */
-export class ApiGatewayRestApiStandard extends Construct {
+export class ApiGatewayRestApiStandard extends Construct implements apigateway.IRestApi {
   /**
-   * Die erstellte REST API
+   * Die innere REST API (privat für Delegation)
    */
-  public readonly restApi: apigateway.RestApi;
+  private readonly _restApi: apigateway.RestApi;
 
-  /**
-   * REST API ID
-   */
+  // ========================================
+  // IRestApi INTERFACE PROPERTIES
+  // ========================================
+
   public readonly restApiId: string;
-
-  /**
-   * API URL
-   */
-  public readonly url: string;
-
-  /**
-   * Root Resource (für addResource/addMethod)
-   */
+  public readonly restApiName: string;
+  public readonly restApiRootResourceId: string;
+  public readonly restApiRef: apigateway.RestApiReference;
   public readonly root: apigateway.IResource;
+  public readonly url: string;
+  public readonly deploymentStage: apigateway.Stage;
+  public readonly env: cdk.ResourceEnvironment;
+  public readonly stack: cdk.Stack;
+  public readonly node: Node;
 
   constructor(scope: Construct, id: string, props: ApiGatewayRestApiStandardProps = {}) {
     super(scope, id);
@@ -132,10 +146,20 @@ export class ApiGatewayRestApiStandard extends Construct {
     }
 
     // ========================================
-    // 2. REST API ERSTELLEN
+    // 2. DEPLOY OPTIONS
     // ========================================
 
-    this.restApi = new apigateway.RestApi(this, 'RestApi', {
+    const deployOptions = props.deployOptions ?? {
+      stageName: props.defaultStageName ?? 'prod',
+      loggingLevel: apigateway.MethodLoggingLevel.INFO,
+      dataTraceEnabled: true,
+    };
+
+    // ========================================
+    // 3. REST API ERSTELLEN
+    // ========================================
+
+    this._restApi = new apigateway.RestApi(this, 'RestApi', {
       restApiName: props.restApiName,
       description: props.description,
 
@@ -144,11 +168,7 @@ export class ApiGatewayRestApiStandard extends Construct {
 
       // Deployment
       deploy: true,
-      deployOptions: {
-        stageName: props.defaultStageName ?? 'prod',
-        loggingLevel: apigateway.MethodLoggingLevel.INFO,
-        dataTraceEnabled: true,
-      },
+      deployOptions: deployOptions,
 
       // CloudWatch Role
       cloudWatchRole: props.cloudWatchRole !== false,
@@ -163,7 +183,7 @@ export class ApiGatewayRestApiStandard extends Construct {
     });
 
     // ========================================
-    // 3. ACCOUNT-LEVEL CLOUDWATCH ROLE
+    // 4. ACCOUNT-LEVEL CLOUDWATCH ROLE
     // ========================================
 
     if (cloudWatchRole) {
@@ -176,15 +196,129 @@ export class ApiGatewayRestApiStandard extends Construct {
     // 5. TAGS
     // ========================================
 
-    cdk.Tags.of(this.restApi).add('ManagedBy', 'CDK');
-    cdk.Tags.of(this.restApi).add('Construct', 'ApiGatewayRestApiStandard');
+    cdk.Tags.of(this._restApi).add('ManagedBy', 'CDK');
+    cdk.Tags.of(this._restApi).add('Construct', 'ApiGatewayRestApiStandard');
 
     // ========================================
-    // 6. OUTPUTS
+    // 6. DELEGIERE IRestApi PROPERTIES
     // ========================================
 
-    this.restApiId = this.restApi.restApiId;
-    this.url = this.restApi.url;
-    this.root = this.restApi.root;
+    this.restApiId = this._restApi.restApiId;
+    this.restApiName = this._restApi.restApiName;
+    this.restApiRootResourceId = this._restApi.restApiRootResourceId;
+    this.restApiRef = {
+      restApiId: this._restApi.restApiId,
+    };
+    this.root = this._restApi.root;
+    this.url = this._restApi.url;
+    this.deploymentStage = this._restApi.deploymentStage;
+    this.env = this._restApi.env;
+    this.stack = this._restApi.stack;
+    this.node = this._restApi.node;
+  }
+
+  // ========================================
+  // IRestApi INTERFACE METHODS - URL Generation
+  // ========================================
+
+  public urlForPath(path?: string): string {
+    return this._restApi.urlForPath(path);
+  }
+
+  public arnForExecuteApi(method?: string, path?: string, stage?: string): string {
+    return this._restApi.arnForExecuteApi(method, path, stage);
+  }
+
+  // ========================================
+  // IRestApi INTERFACE METHODS - Grant Permissions
+  // ========================================
+
+  public grantExecute(identity: iam.IGrantable): iam.Grant {
+    return (this._restApi as any).grantExecute(identity);
+  }
+
+  // ========================================
+  // IRestApi INTERFACE METHODS - Configuration
+  // ========================================
+
+  public addGatewayResponse(id: string, options: apigateway.GatewayResponseOptions): apigateway.GatewayResponse {
+    return this._restApi.addGatewayResponse(id, options);
+  }
+
+  public addRequestValidator(id: string, props: apigateway.RequestValidatorOptions): apigateway.RequestValidator {
+    return this._restApi.addRequestValidator(id, props);
+  }
+
+  public addModel(id: string, props: apigateway.ModelOptions): apigateway.Model {
+    return this._restApi.addModel(id, props);
+  }
+
+  public addApiKey(id: string, options?: apigateway.ApiKeyOptions): apigateway.IApiKey {
+    return this._restApi.addApiKey(id, options);
+  }
+
+  public addUsagePlan(id: string, props?: apigateway.UsagePlanProps): apigateway.UsagePlan {
+    return this._restApi.addUsagePlan(id, props);
+  }
+
+  public addDomainName(id: string, options: apigateway.DomainNameOptions): apigateway.DomainName {
+    return this._restApi.addDomainName(id, options);
+  }
+
+  // ========================================
+  // IRestApi INTERFACE METHODS - Metrics
+  // ========================================
+
+  public metric(metricName: string, props?: cloudwatch.MetricOptions): cloudwatch.Metric {
+    return this._restApi.metric(metricName, props);
+  }
+
+  public metricCacheHitCount(props?: cloudwatch.MetricOptions): cloudwatch.Metric {
+    return this._restApi.metricCacheHitCount(props);
+  }
+
+  public metricCacheMissCount(props?: cloudwatch.MetricOptions): cloudwatch.Metric {
+    return this._restApi.metricCacheMissCount(props);
+  }
+
+  public metricClientError(props?: cloudwatch.MetricOptions): cloudwatch.Metric {
+    return this._restApi.metricClientError(props);
+  }
+
+  public metricServerError(props?: cloudwatch.MetricOptions): cloudwatch.Metric {
+    return this._restApi.metricServerError(props);
+  }
+
+  public metricCount(props?: cloudwatch.MetricOptions): cloudwatch.Metric {
+    return this._restApi.metricCount(props);
+  }
+
+  public metricIntegrationLatency(props?: cloudwatch.MetricOptions): cloudwatch.Metric {
+    return this._restApi.metricIntegrationLatency(props);
+  }
+
+  public metricLatency(props?: cloudwatch.MetricOptions): cloudwatch.Metric {
+    return this._restApi.metricLatency(props);
+  }
+
+  // ========================================
+  // REMOVAL POLICY
+  // ========================================
+
+  public applyRemovalPolicy(policy: cdk.RemovalPolicy): void {
+    this._restApi.applyRemovalPolicy(policy);
+  }
+
+  // ========================================
+  // ADDITIONAL METHODS
+  // ========================================
+
+  /**
+   * Access to the underlying apigateway.RestApi for advanced use cases
+   *
+   * @internal
+   */
+  public get restApi(): apigateway.RestApi {
+    return this._restApi;
   }
 }

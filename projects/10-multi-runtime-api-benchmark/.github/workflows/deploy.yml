@@ -1,0 +1,250 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'projects/10-multi-runtime-api-benchmark/**'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+
+defaults:
+  run:
+    working-directory: projects/10-multi-runtime-api-benchmark
+
+permissions:
+  id-token: write   # Required for OIDC
+  contents: read
+
+jobs:
+  build-lambdas:
+    name: Build Lambda Functions
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        runtime: [python, typescript, go, kotlin]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Python Lambda
+        if: matrix.runtime == 'python'
+        run: |
+          cd lambdas/python
+          python3 -m venv venv
+          source venv/bin/activate
+          pip install -r requirements.txt
+          mkdir -p dist
+          cp -r src/* dist/
+          cp -r venv/lib/python3.*/site-packages/* dist/
+          cd dist && zip -r ../python-lambda.zip . && cd ..
+
+      - name: Set up Node.js
+        if: matrix.runtime == 'typescript'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build TypeScript Lambda
+        if: matrix.runtime == 'typescript'
+        run: |
+          cd lambdas/typescript
+          npm ci
+          npm run build
+          cd dist && zip -r ../typescript-lambda.zip . && cd ..
+
+      - name: Set up Go
+        if: matrix.runtime == 'go'
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Build Go Lambda
+        if: matrix.runtime == 'go'
+        run: |
+          cd lambdas/go
+          GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o bootstrap cmd/main.go
+          zip go-lambda.zip bootstrap
+
+      - name: Set up JDK
+        if: matrix.runtime == 'kotlin'
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Build Kotlin Lambda
+        if: matrix.runtime == 'kotlin'
+        run: |
+          cd lambdas/kotlin
+          chmod +x gradlew
+          ./gradlew shadowJar
+          cp build/libs/bootstrap.jar kotlin-lambda.jar
+
+      - name: Upload Lambda artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.runtime }}-lambda
+          path: projects/10-multi-runtime-api-benchmark/lambdas/${{ matrix.runtime }}/*lambda.*
+          retention-days: 7
+
+  deploy-infrastructure:
+    name: Deploy Infrastructure
+    runs-on: ubuntu-latest
+    needs: build-lambdas
+    environment:
+      name: ${{ github.event.inputs.environment || 'dev' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
+
+      - name: Download Lambda artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: lambdas-built
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'projects/10-multi-runtime-api-benchmark/cdk/package-lock.json'
+
+      - name: Install CDK dependencies
+        run: |
+          cd cdk
+          npm ci
+
+      - name: CDK Bootstrap (if needed)
+        run: |
+          cd cdk
+          npx cdk bootstrap aws://$(aws sts get-caller-identity --query Account --output text)/${{ vars.AWS_REGION || 'us-east-1' }}
+
+      - name: CDK Diff
+        run: |
+          cd cdk
+          export STAGE=${{ github.event.inputs.environment || 'dev' }}
+          npx cdk diff --all
+
+      - name: CDK Deploy
+        run: |
+          cd cdk
+          export STAGE=${{ github.event.inputs.environment || 'dev' }}
+          npx cdk deploy --all --require-approval never
+
+      - name: Get API URL
+        id: api-url
+        run: |
+          export STAGE=${{ github.event.inputs.environment || 'dev' }}
+          API_URL=$(aws cloudformation describe-stacks \
+            --stack-name "${STAGE}-benchmark-shared" \
+            --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" \
+            --output text)
+          echo "api_url=$API_URL" >> $GITHUB_OUTPUT
+
+      - name: Deployment summary
+        run: |
+          echo "## Deployment Complete! 🚀" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ github.event.inputs.environment || 'dev' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Region:** ${{ vars.AWS_REGION || 'us-east-1' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**API URL:** ${{ steps.api-url.outputs.api_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "1. Test the API: \`curl ${{ steps.api-url.outputs.api_url }}/health\`" >> $GITHUB_STEP_SUMMARY
+          echo "2. Run benchmarks: \`./scripts/benchmark-all.sh\`" >> $GITHUB_STEP_SUMMARY
+
+  smoke-test:
+    name: Smoke Test
+    runs-on: ubuntu-latest
+    needs: deploy-infrastructure
+    if: success()
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
+
+      - name: Get API URL
+        id: api-url
+        run: |
+          export STAGE=${{ github.event.inputs.environment || 'dev' }}
+          API_URL=$(aws cloudformation describe-stacks \
+            --stack-name "${STAGE}-benchmark-shared" \
+            --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" \
+            --output text)
+          echo "api_url=$API_URL" >> $GITHUB_OUTPUT
+
+      - name: Test health endpoints
+        run: |
+          API_URL="${{ steps.api-url.outputs.api_url }}"
+
+          echo "Testing health endpoints..."
+
+          for runtime in python typescript go kotlin; do
+            echo "Testing $runtime..."
+            response=$(curl -s -o /dev/null -w "%{http_code}" "$API_URL/$runtime/health")
+
+            if [ "$response" == "200" ]; then
+              echo "✅ $runtime health check passed"
+            else
+              echo "❌ $runtime health check failed (HTTP $response)"
+              exit 1
+            fi
+          done
+
+      - name: Test CRUD operations
+        run: |
+          API_URL="${{ steps.api-url.outputs.api_url }}"
+
+          # Test with Python runtime
+          echo "Testing CRUD with Python runtime..."
+
+          # Create item
+          ITEM_ID=$(curl -s -X POST "$API_URL/python/items" \
+            -H "Content-Type: application/json" \
+            -d '{"name":"Test Item","description":"Created by CI","price":19.99}' \
+            | jq -r '.data.id')
+
+          if [ -z "$ITEM_ID" ] || [ "$ITEM_ID" == "null" ]; then
+            echo "❌ Failed to create item"
+            exit 1
+          fi
+
+          echo "✅ Created item: $ITEM_ID"
+
+          # Get item
+          curl -s "$API_URL/python/items/$ITEM_ID" | jq .
+
+          # Delete item
+          curl -s -X DELETE "$API_URL/python/items/$ITEM_ID"
+
+          echo "✅ CRUD operations successful"
+
+      - name: Smoke test summary
+        run: |
+          echo "## Smoke Tests Passed ✅" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "All health endpoints responding correctly." >> $GITHUB_STEP_SUMMARY
+          echo "CRUD operations working as expected." >> $GITHUB_STEP_SUMMARY

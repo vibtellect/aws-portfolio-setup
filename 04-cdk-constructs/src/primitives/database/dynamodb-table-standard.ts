@@ -2,6 +2,8 @@ import { Construct } from 'constructs';
 import * as cdk from 'aws-cdk-lib';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as kms from 'aws-cdk-lib/aws-kms';
+import * as iam from 'aws-cdk-lib/aws-iam';
+import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 
 /**
  * Properties for DynamoDbTableStandard
@@ -170,40 +172,48 @@ export interface DynamoDbTableStandardProps {
  * });
  * ```
  */
-export class DynamoDbTableStandard extends Construct {
+export class DynamoDbTableStandard extends Construct implements dynamodb.ITable {
   /**
-   * Die erstellte DynamoDB Table
-   *
-   * WARUM public?
-   * - Lambda Functions benötigen Zugriff
-   * - Für Custom Policies/Permissions
+   * Die innere DynamoDB Table (privat für Delegation)
    */
-  public readonly table: dynamodb.Table;
+  private readonly _table: dynamodb.Table;
+
+  // ========================================
+  // ITable INTERFACE IMPLEMENTATION
+  // ========================================
 
   /**
-   * ARN der Table
-   *
-   * WARUM extra Property?
-   * - Häufig benötigt für IAM Policies
-   * - Für Cross-Account Zugriff
+   * Arn of the dynamodb table.
+   * @attribute
    */
   public readonly tableArn: string;
 
   /**
-   * Name der Table
-   *
-   * WARUM extra Property?
-   * - Für Lambda Environment Variables
-   * - Für CLI-Scripts
+   * Table name of the dynamodb table.
+   * @attribute
    */
   public readonly tableName: string;
 
   /**
-   * Stream ARN (falls Stream aktiviert)
-   *
-   * @default - undefined if no stream
+   * ARN of the table's stream, if there is one.
+   * @attribute
    */
   public readonly tableStreamArn?: string;
+
+  /**
+   * Optional KMS encryption key associated with this table.
+   */
+  public readonly encryptionKey?: kms.IKey;
+
+  /**
+   * The environment this resource belongs to.
+   */
+  public readonly env: cdk.ResourceEnvironment;
+
+  /**
+   * The stack in which this resource is defined.
+   */
+  public readonly stack: cdk.Stack;
 
   constructor(scope: Construct, id: string, props: DynamoDbTableStandardProps) {
     super(scope, id);
@@ -232,7 +242,7 @@ export class DynamoDbTableStandard extends Construct {
     // 4. DYNAMODB TABLE ERSTELLEN
     // ========================================
 
-    this.table = new dynamodb.Table(this, 'Table', {
+    this._table = new dynamodb.Table(this, 'Table', {
       tableName: props.tableName,
 
       // Keys
@@ -262,17 +272,163 @@ export class DynamoDbTableStandard extends Construct {
     // 5. TAGS
     // ========================================
 
-    cdk.Tags.of(this.table).add('ManagedBy', 'CDK');
-    cdk.Tags.of(this.table).add('Construct', 'DynamoDbTableStandard');
+    cdk.Tags.of(this._table).add('ManagedBy', 'CDK');
+    cdk.Tags.of(this._table).add('Construct', 'DynamoDbTableStandard');
 
     // ========================================
-    // 6. OUTPUTS
+    // 6. DELEGIERE ITable PROPERTIES
     // ========================================
 
-    this.tableArn = this.table.tableArn;
-    this.tableName = this.table.tableName;
-    this.tableStreamArn = this.table.tableStreamArn;
+    this.tableArn = this._table.tableArn;
+    this.tableName = this._table.tableName;
+    this.tableStreamArn = this._table.tableStreamArn;
+    this.encryptionKey = this._table.encryptionKey;
+    this.env = this._table.env;
+    this.stack = this._table.stack;
   }
+
+  // ========================================
+  // ITable INTERFACE METHODS - Grant Permissions
+  // ========================================
+
+  /**
+   * Adds an IAM policy statement associated with this table to an IAM principal's policy.
+   */
+  public grant(grantee: iam.IGrantable, ...actions: string[]): iam.Grant {
+    return this._table.grant(grantee, ...actions);
+  }
+
+  /**
+   * Adds an IAM policy statement associated with this table's stream to an IAM principal's policy.
+   */
+  public grantStream(grantee: iam.IGrantable, ...actions: string[]): iam.Grant {
+    return this._table.grantStream(grantee, ...actions);
+  }
+
+  /**
+   * Permits an IAM principal all data read operations from this table.
+   */
+  public grantReadData(grantee: iam.IGrantable): iam.Grant {
+    return this._table.grantReadData(grantee);
+  }
+
+  /**
+   * Permits an IAM Principal to list streams attached to current dynamodb table.
+   */
+  public grantTableListStreams(grantee: iam.IGrantable): iam.Grant {
+    return this._table.grantTableListStreams(grantee);
+  }
+
+  /**
+   * Permits an IAM principal all stream data read operations for this table's stream.
+   */
+  public grantStreamRead(grantee: iam.IGrantable): iam.Grant {
+    return this._table.grantStreamRead(grantee);
+  }
+
+  /**
+   * Permits an IAM principal all data write operations to this table.
+   */
+  public grantWriteData(grantee: iam.IGrantable): iam.Grant {
+    return this._table.grantWriteData(grantee);
+  }
+
+  /**
+   * Permits an IAM principal to all data read/write operations to this table.
+   */
+  public grantReadWriteData(grantee: iam.IGrantable): iam.Grant {
+    return this._table.grantReadWriteData(grantee);
+  }
+
+  /**
+   * Permits all DynamoDB operations ("dynamodb:*") to an IAM principal.
+   */
+  public grantFullAccess(grantee: iam.IGrantable): iam.Grant {
+    return this._table.grantFullAccess(grantee);
+  }
+
+  // ========================================
+  // ITable INTERFACE METHODS - Metrics
+  // ========================================
+
+  /**
+   * Metric for the number of Errors executing all Lambdas.
+   */
+  public metric(metricName: string, props?: cloudwatch.MetricOptions): cloudwatch.Metric {
+    return this._table.metric(metricName, props);
+  }
+
+  /**
+   * Metric for the consumed read capacity units.
+   */
+  public metricConsumedReadCapacityUnits(props?: cloudwatch.MetricOptions): cloudwatch.Metric {
+    return this._table.metricConsumedReadCapacityUnits(props);
+  }
+
+  /**
+   * Metric for the consumed write capacity units.
+   */
+  public metricConsumedWriteCapacityUnits(props?: cloudwatch.MetricOptions): cloudwatch.Metric {
+    return this._table.metricConsumedWriteCapacityUnits(props);
+  }
+
+  /**
+   * Metric for the system errors this table.
+   */
+  public metricSystemErrorsForOperations(props?: dynamodb.SystemErrorsForOperationsMetricOptions): cloudwatch.IMetric {
+    return this._table.metricSystemErrorsForOperations(props);
+  }
+
+  /**
+   * Metric for the user errors.
+   */
+  public metricUserErrors(props?: cloudwatch.MetricOptions): cloudwatch.Metric {
+    return this._table.metricUserErrors(props);
+  }
+
+  /**
+   * Metric for the conditional check failed requests.
+   */
+  public metricConditionalCheckFailedRequests(props?: cloudwatch.MetricOptions): cloudwatch.Metric {
+    return this._table.metricConditionalCheckFailedRequests(props);
+  }
+
+  /**
+   * Metric for throttled requests.
+   * @deprecated use `metricThrottledRequestsForOperations`
+   */
+  public metricThrottledRequests(props?: cloudwatch.MetricOptions): cloudwatch.Metric {
+    return this._table.metricThrottledRequests(props);
+  }
+
+  /**
+   * Metric for throttled requests.
+   */
+  public metricThrottledRequestsForOperations(props?: dynamodb.OperationsMetricOptions): cloudwatch.IMetric {
+    return this._table.metricThrottledRequestsForOperations(props);
+  }
+
+  /**
+   * Metric for the successful request latency.
+   */
+  public metricSuccessfulRequestLatency(props?: cloudwatch.MetricOptions): cloudwatch.Metric {
+    return this._table.metricSuccessfulRequestLatency(props);
+  }
+
+  // ========================================
+  // IResource INTERFACE METHODS
+  // ========================================
+
+  /**
+   * Apply the given removal policy to this resource
+   */
+  public applyRemovalPolicy(policy: cdk.RemovalPolicy): void {
+    this._table.applyRemovalPolicy(policy);
+  }
+
+  // ========================================
+  // PRIVATE METHODS
+  // ========================================
 
   /**
    * Validiert die Props
@@ -351,5 +507,18 @@ export class DynamoDbTableStandard extends Construct {
 
     // Dev/Test Stack → DESTROY
     return cdk.RemovalPolicy.DESTROY;
+  }
+
+  // ========================================
+  // ADDITIONAL METHODS
+  // ========================================
+
+  /**
+   * Access to the underlying dynamodb.Table for advanced use cases
+   *
+   * @internal
+   */
+  public get table(): dynamodb.Table {
+    return this._table;
   }
 }

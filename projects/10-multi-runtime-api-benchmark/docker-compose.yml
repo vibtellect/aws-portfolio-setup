@@ -1,0 +1,154 @@
+version: '3.8'
+
+services:
+  # LocalStack - Local AWS cloud stack
+  localstack:
+    image: localstack/localstack:latest
+    container_name: benchmark-localstack
+    ports:
+      - "4566:4566"            # LocalStack Gateway
+      - "4510-4559:4510-4559"  # External services port range
+    environment:
+      - SERVICES=dynamodb,apigateway,lambda,logs,iam
+      - DEBUG=1
+      - DATA_DIR=/tmp/localstack/data
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - LAMBDA_EXECUTOR=docker-reuse
+      - LAMBDA_REMOTE_DOCKER=false
+    volumes:
+      - "${TMPDIR:-/tmp}/localstack:/tmp/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "./scripts/localstack-init.sh:/etc/localstack/init/ready.d/init.sh"
+    networks:
+      - benchmark-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Python Lambda - Local development server
+  python-lambda:
+    build:
+      context: ./lambdas/python
+      dockerfile: Dockerfile.dev
+    container_name: benchmark-python
+    ports:
+      - "8000:8000"
+    environment:
+      - TABLE_NAME=dev-benchmark-items
+      - RUNTIME_NAME=python
+      - AWS_ENDPOINT_URL=http://localstack:4566
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_DEFAULT_REGION=us-east-1
+    volumes:
+      - ./lambdas/python/src:/app/src
+    networks:
+      - benchmark-network
+    depends_on:
+      localstack:
+        condition: service_healthy
+    command: uvicorn src.app:app --host 0.0.0.0 --port 8000 --reload
+
+  # TypeScript Lambda - Local development server
+  typescript-lambda:
+    build:
+      context: ./lambdas/typescript
+      dockerfile: Dockerfile.dev
+    container_name: benchmark-typescript
+    ports:
+      - "8001:8001"
+    environment:
+      - TABLE_NAME=dev-benchmark-items
+      - RUNTIME_NAME=typescript
+      - AWS_ENDPOINT_URL=http://localstack:4566
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_DEFAULT_REGION=us-east-1
+      - PORT=8001
+    volumes:
+      - ./lambdas/typescript/src:/app/src
+      - ./lambdas/typescript/dist:/app/dist
+    networks:
+      - benchmark-network
+    depends_on:
+      localstack:
+        condition: service_healthy
+    command: npm run dev
+
+  # Go Lambda - Local development server
+  go-lambda:
+    build:
+      context: ./lambdas/go
+      dockerfile: Dockerfile.dev
+    container_name: benchmark-go
+    ports:
+      - "8002:8002"
+    environment:
+      - TABLE_NAME=dev-benchmark-items
+      - RUNTIME_NAME=go
+      - AWS_ENDPOINT_URL=http://localstack:4566
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_DEFAULT_REGION=us-east-1
+      - GIN_MODE=debug
+      - PORT=8002
+    volumes:
+      - ./lambdas/go:/app
+    networks:
+      - benchmark-network
+    depends_on:
+      localstack:
+        condition: service_healthy
+    command: air -c .air.toml
+
+  # Kotlin Lambda - Local development server
+  kotlin-lambda:
+    build:
+      context: ./lambdas/kotlin
+      dockerfile: Dockerfile.dev
+    container_name: benchmark-kotlin
+    ports:
+      - "8003:8003"
+    environment:
+      - TABLE_NAME=dev-benchmark-items
+      - RUNTIME_NAME=kotlin
+      - AWS_ENDPOINT_URL=http://localstack:4566
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_DEFAULT_REGION=us-east-1
+      - KTOR_ENV=dev
+      - PORT=8003
+    volumes:
+      - ./lambdas/kotlin/src:/app/src
+      - ./lambdas/kotlin/build:/app/build
+    networks:
+      - benchmark-network
+    depends_on:
+      localstack:
+        condition: service_healthy
+    command: ./gradlew run --continuous
+
+  # DynamoDB Admin UI (optional)
+  dynamodb-admin:
+    image: aaronshaf/dynamodb-admin:latest
+    container_name: benchmark-dynamodb-admin
+    ports:
+      - "8080:8001"
+    environment:
+      - DYNAMO_ENDPOINT=http://localstack:4566
+      - AWS_REGION=us-east-1
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+    networks:
+      - benchmark-network
+    depends_on:
+      - localstack
+
+networks:
+  benchmark-network:
+    driver: bridge
+
+volumes:
+  localstack-data:
