@@ -141,7 +141,7 @@ func (db *DynamoDBClient) UpdateItem(itemID string, itemData models.ItemUpdate) 
 	if itemData.Price != nil {
 		updateExpression += ", price = :price"
 		expressionValues[":price"] = &dynamodb.AttributeValue{
-			N: aws.String(fmt.Sprintf("%f", *itemData.Price)),
+			N: aws.String(strconv.FormatFloat(*itemData.Price, 'f', -1, 64)),
 		}
 	}
 
