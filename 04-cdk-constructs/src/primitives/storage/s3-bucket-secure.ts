@@ -1,6 +1,8 @@
 import { Construct } from 'constructs';
 import * as cdk from 'aws-cdk-lib';
 import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as iam from 'aws-cdk-lib/aws-iam';
+import * as kms from 'aws-cdk-lib/aws-kms';
 
 /**
  * Properties for S3BucketSecure
@@ -74,10 +76,23 @@ export interface S3BucketSecureProps {
    * @default - No CORS rules
    */
   readonly cors?: s3.CorsRule[];
+
+  /**
+   * Encryption key (for customer-managed encryption)
+   *
+   * @default - AWS managed encryption (S3_MANAGED)
+   */
+  readonly encryptionKey?: kms.IKey;
 }
 
 /**
- * S3 Bucket mit Security Best Practices
+ * S3 Bucket mit Security Best Practices und IBucket Interface
+ *
+ * Diese Klasse implementiert das IBucket Interface durch Delegation an den
+ * inneren s3.Bucket. Das ermöglicht:
+ * - Verwendung überall wo IBucket erwartet wird
+ * - Zugriff auf alle IBucket Methoden
+ * - Best Practices durch opinionated Defaults
  *
  * WARUM dieser Construct?
  * 1. Sicherheit: Block Public Access immer aktiviert
@@ -89,6 +104,9 @@ export interface S3BucketSecureProps {
  * // Einfacher Bucket
  * const bucket = new S3BucketSecure(this, 'MyBucket');
  *
+ * // Kann überall verwendet werden wo IBucket erwartet wird
+ * bucket.grantRead(lambdaFunction);
+ *
  * // Static Website Hosting
  * const websiteBucket = new S3BucketSecure(this, 'WebsiteBucket', {
  *   websiteIndexDocument: 'index.html',
@@ -96,26 +114,29 @@ export interface S3BucketSecureProps {
  * });
  * ```
  */
-export class S3BucketSecure extends Construct {
+export class S3BucketSecure extends Construct implements s3.IBucket {
   /**
-   * Der erstellte S3 Bucket
+   * Der innere S3 Bucket (privat für Delegation)
    */
-  public readonly bucket: s3.Bucket;
+  private readonly _bucket: s3.Bucket;
 
-  /**
-   * ARN des Buckets
-   */
+  // ========================================
+  // IBucket INTERFACE PROPERTIES
+  // ========================================
+
   public readonly bucketArn: string;
-
-  /**
-   * Name des Buckets
-   */
   public readonly bucketName: string;
-
-  /**
-   * Website URL (falls Website Hosting aktiviert)
-   */
-  public readonly bucketWebsiteUrl?: string;
+  public readonly bucketDomainName: string;
+  public readonly bucketWebsiteUrl: string;
+  public readonly bucketWebsiteDomainName: string;
+  public readonly bucketRegionalDomainName: string;
+  public readonly bucketDualStackDomainName: string;
+  public readonly bucketWebsiteNewUrlFormat: boolean;
+  public readonly encryptionKey?: kms.IKey;
+  public readonly isWebsite?: boolean;
+  public readonly policy?: s3.BucketPolicy;
+  public readonly env: cdk.ResourceEnvironment;
+  public readonly stack: cdk.Stack;
 
   constructor(scope: Construct, id: string, props: S3BucketSecureProps = {}) {
     super(scope, id);
@@ -139,17 +160,26 @@ export class S3BucketSecure extends Construct {
         : undefined;
 
     // ========================================
-    // 3. S3 BUCKET ERSTELLEN
+    // 3. ENCRYPTION
     // ========================================
 
-    this.bucket = new s3.Bucket(this, 'Bucket', {
+    const encryption = props.encryptionKey
+      ? s3.BucketEncryption.KMS
+      : s3.BucketEncryption.S3_MANAGED;
+
+    // ========================================
+    // 4. S3 BUCKET ERSTELLEN
+    // ========================================
+
+    this._bucket = new s3.Bucket(this, 'Bucket', {
       bucketName: props.bucketName,
 
       // Security: Block Public Access (immer aktiviert!)
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
 
-      // Encryption: SSE-S3 (AWS Managed)
-      encryption: s3.BucketEncryption.S3_MANAGED,
+      // Encryption
+      encryption: encryption,
+      encryptionKey: props.encryptionKey,
 
       // Versioning
       versioned: props.versioned ?? true,
@@ -173,20 +203,156 @@ export class S3BucketSecure extends Construct {
     });
 
     // ========================================
-    // 4. TAGS
+    // 5. TAGS
     // ========================================
 
-    cdk.Tags.of(this.bucket).add('ManagedBy', 'CDK');
-    cdk.Tags.of(this.bucket).add('Construct', 'S3BucketSecure');
+    cdk.Tags.of(this._bucket).add('ManagedBy', 'CDK');
+    cdk.Tags.of(this._bucket).add('Construct', 'S3BucketSecure');
 
     // ========================================
-    // 5. OUTPUTS
+    // 6. DELEGIERE IBucket PROPERTIES
     // ========================================
 
-    this.bucketArn = this.bucket.bucketArn;
-    this.bucketName = this.bucket.bucketName;
-    this.bucketWebsiteUrl = this.bucket.bucketWebsiteUrl;
+    this.bucketArn = this._bucket.bucketArn;
+    this.bucketName = this._bucket.bucketName;
+    this.bucketDomainName = this._bucket.bucketDomainName;
+    this.bucketWebsiteUrl = this._bucket.bucketWebsiteUrl;
+    this.bucketWebsiteDomainName = this._bucket.bucketWebsiteDomainName;
+    this.bucketRegionalDomainName = this._bucket.bucketRegionalDomainName;
+    this.bucketDualStackDomainName = this._bucket.bucketDualStackDomainName;
+    this.bucketWebsiteNewUrlFormat = this._bucket.bucketWebsiteNewUrlFormat;
+    this.encryptionKey = this._bucket.encryptionKey;
+    this.isWebsite = this._bucket.isWebsite;
+    this.policy = this._bucket.policy;
+    this.env = this._bucket.env;
+    this.stack = this._bucket.stack;
   }
+
+  // ========================================
+  // IBucket INTERFACE METHODS - Grant Permissions
+  // ========================================
+
+  public grantRead(identity: iam.IGrantable, objectsKeyPattern?: any): iam.Grant {
+    return this._bucket.grantRead(identity, objectsKeyPattern);
+  }
+
+  public grantWrite(identity: iam.IGrantable, objectsKeyPattern?: any, allowedActionPatterns?: string[]): iam.Grant {
+    return this._bucket.grantWrite(identity, objectsKeyPattern, allowedActionPatterns);
+  }
+
+  public grantReadWrite(identity: iam.IGrantable, objectsKeyPattern?: any): iam.Grant {
+    return this._bucket.grantReadWrite(identity, objectsKeyPattern);
+  }
+
+  public grantPut(identity: iam.IGrantable, objectsKeyPattern?: any): iam.Grant {
+    return this._bucket.grantPut(identity, objectsKeyPattern);
+  }
+
+  public grantPutAcl(identity: iam.IGrantable, objectsKeyPattern?: string): iam.Grant {
+    return this._bucket.grantPutAcl(identity, objectsKeyPattern);
+  }
+
+  public grantDelete(identity: iam.IGrantable, objectsKeyPattern?: any): iam.Grant {
+    return this._bucket.grantDelete(identity, objectsKeyPattern);
+  }
+
+  public grantPublicAccess(keyPrefix?: string, ...allowedActions: string[]): iam.Grant {
+    return this._bucket.grantPublicAccess(keyPrefix, ...allowedActions);
+  }
+
+  // ========================================
+  // IBucket INTERFACE METHODS - Notifications
+  // ========================================
+
+  public addEventNotification(
+    event: s3.EventType,
+    dest: s3.IBucketNotificationDestination,
+    ...filters: s3.NotificationKeyFilter[]
+  ): void {
+    this._bucket.addEventNotification(event, dest, ...filters);
+  }
+
+  public addObjectCreatedNotification(
+    dest: s3.IBucketNotificationDestination,
+    ...filters: s3.NotificationKeyFilter[]
+  ): void {
+    this._bucket.addObjectCreatedNotification(dest, ...filters);
+  }
+
+  public addObjectRemovedNotification(
+    dest: s3.IBucketNotificationDestination,
+    ...filters: s3.NotificationKeyFilter[]
+  ): void {
+    this._bucket.addObjectRemovedNotification(dest, ...filters);
+  }
+
+  // ========================================
+  // IBucket INTERFACE METHODS - Policy
+  // ========================================
+
+  public addToResourcePolicy(permission: iam.PolicyStatement): iam.AddToResourcePolicyResult {
+    return this._bucket.addToResourcePolicy(permission);
+  }
+
+  // ========================================
+  // IBucket INTERFACE METHODS - URL Methods
+  // ========================================
+
+  public arnForObjects(keyPattern: string): string {
+    return this._bucket.arnForObjects(keyPattern);
+  }
+
+  public s3UrlForObject(key?: string): string {
+    return this._bucket.s3UrlForObject(key);
+  }
+
+  public virtualHostedUrlForObject(key?: string, options?: s3.VirtualHostedStyleUrlOptions): string {
+    return this._bucket.virtualHostedUrlForObject(key, options);
+  }
+
+  public urlForObject(key?: string): string {
+    return this._bucket.urlForObject(key);
+  }
+
+  public transferAccelerationUrlForObject(key?: string, options?: s3.TransferAccelerationUrlOptions): string {
+    return this._bucket.transferAccelerationUrlForObject(key, options);
+  }
+
+  // ========================================
+  // IBucket INTERFACE METHODS - Configuration
+  // ========================================
+
+  public addCorsRule(rule: s3.CorsRule): void {
+    this._bucket.addCorsRule(rule);
+  }
+
+  public addInventory(inventory: s3.Inventory): void {
+    this._bucket.addInventory(inventory);
+  }
+
+  public addLifecycleRule(rule: s3.LifecycleRule): void {
+    this._bucket.addLifecycleRule(rule);
+  }
+
+  public addMetric(metric: s3.BucketMetrics): void {
+    this._bucket.addMetric(metric);
+  }
+
+  public enableEventBridgeNotification(): void {
+    this._bucket.enableEventBridgeNotification();
+  }
+
+  // ========================================
+  // REMOVAL POLICY
+  // ========================================
+
+  public applyRemovalPolicy(policy: cdk.RemovalPolicy): void {
+    this._bucket.applyRemovalPolicy(policy);
+  }
+
+  // ========================================
+  // PRIVATE METHODS
+  // ========================================
 
   /**
    * Bestimmt RemovalPolicy basierend auf Stack-Name
@@ -211,5 +377,14 @@ export class S3BucketSecure extends Construct {
 
     // Dev/Test Stack → DESTROY
     return cdk.RemovalPolicy.DESTROY;
+  }
+
+  /**
+   * Access to the underlying s3.Bucket for advanced use cases
+   *
+   * @internal
+   */
+  public get bucket(): s3.Bucket {
+    return this._bucket;
   }
 }
