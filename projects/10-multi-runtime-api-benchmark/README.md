@@ -15,14 +15,17 @@ Entwicklung einer objektiven Performance-Vergleichsplattform für AWS Lambda RES
 - **Kotlin Lambda** (Ktor) - ✅ Produktionsbereit
 - **Shared Infrastructure** (DynamoDB, API Gateway) - ✅
 - **CloudWatch Monitoring Dashboard** - ✅
-- **Comprehensive Test Suite** (CDK + Python + TypeScript) - ✅
+- **Comprehensive Test Suite** (All runtimes: 450+ tests total) - ✅
 - **Build & Deployment Scripts** - ✅
+- **Benchmarking Tools** (Cold start, load testing, comparison) - ✅
+- **CI/CD Pipeline** (GitHub Actions) - ✅
+- **Local Development** (Docker Compose + LocalStack) - ✅
 
 ### 🔮 Zukünftige Erweiterungen
-- **Performance Tests** (k6/Artillery) - Geplant
+- **Performance Test Results** - In Arbeit (Tooling vorhanden)
 - **Kotlin GraalVM Native Image** - Optional
-- **CI/CD Pipeline** - Geplant
 - **OpenAPI/Swagger Docs** - Geplant
+- **Cost Analysis Dashboard** - Geplant
 
 ## Architektur
 
@@ -172,8 +175,81 @@ Alle Runtimes implementieren identische REST API Endpoints:
 └── docs/                          # Dokumentation
 ```
 
+## Features
+
+### 🎯 Benchmarking & Performance Testing
+
+Comprehensive benchmarking tools for comparing runtime performance:
+
+- **`scripts/benchmark-all.sh`** - Master orchestration script
+- **`scripts/measure-cold-starts.sh`** - Cold start measurement (automated)
+- **`scripts/load-test.js`** - k6 load testing for all runtimes
+- **`scripts/compare-results.py`** - Generate comparison reports (Markdown + JSON)
+- **`scripts/visualize-results.py`** - Create charts (matplotlib)
+
+**Usage:**
+```bash
+# Run complete benchmark suite
+./scripts/benchmark-all.sh
+
+# Results saved in results/run-{timestamp}/
+# - cold-starts.csv
+# - load-test-{runtime}.json
+# - comparison-report.md
+# - dashboard.png (summary visualization)
+```
+
+See detailed benchmarking guide: [docs/BENCHMARKING.md](docs/BENCHMARKING.md)
+
+### 🔄 CI/CD Pipeline
+
+Automated testing and deployment with GitHub Actions:
+
+- **`.github/workflows/test.yml`** - Run tests on PR (all runtimes + CDK)
+- **`.github/workflows/lint.yml`** - Code quality checks (linting, formatting)
+- **`.github/workflows/deploy.yml`** - Automated deployment with smoke tests
+
+**Features:**
+- Parallel test execution (Python, TypeScript, Go, Kotlin, CDK)
+- Code coverage reporting (Codecov integration)
+- Automated deployment to dev/staging/prod
+- Post-deployment smoke tests
+- GitHub Actions summaries with test results
+
+### 🐳 Local Development
+
+Docker Compose setup with LocalStack for local AWS services:
+
+- **`docker-compose.yml`** - All services (LocalStack + 4 Lambda runtimes)
+- **Hot reload** for all runtimes (auto-restart on code changes)
+- **DynamoDB Admin UI** at http://localhost:8080
+- **Isolated testing** without AWS costs
+
+**Quick start:**
+```bash
+# Start all services
+docker-compose up -d
+
+# Access services:
+# - Python:     http://localhost:8000
+# - TypeScript: http://localhost:8001
+# - Go:         http://localhost:8002
+# - Kotlin:     http://localhost:8003
+# - LocalStack: http://localhost:4566
+# - DynamoDB UI: http://localhost:8080
+
+# View logs
+docker-compose logs -f
+
+# Stop all services
+docker-compose down
+```
+
+See detailed local development guide: [docs/LOCAL_DEVELOPMENT.md](docs/LOCAL_DEVELOPMENT.md)
+
 ## Voraussetzungen
 
+### Production Deployment
 - **AWS Account** mit ausreichenden Berechtigungen
 - **AWS CLI** konfiguriert
 - **Node.js** >= 18.0.0 (für CDK und TypeScript Lambda)
@@ -182,6 +258,14 @@ Alle Runtimes implementieren identische REST API Endpoints:
 - **Go** >= 1.21 (für Go Lambda)
 - **Java** >= 17 + **Gradle** >= 8.5 (für Kotlin Lambda)
 - **AWS CDK** >= 2.120.0
+
+### Local Development (Optional)
+- **Docker** >= 20.10
+- **Docker Compose** >= 2.0
+
+### Benchmarking (Optional)
+- **k6** for load testing
+- **Python 3.11+** with matplotlib for visualizations
 
 ## Installation
 
