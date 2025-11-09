@@ -654,10 +654,809 @@ const apiUrl = api.apiUrl;            // string
 
 ---
 
-Möchtest du, dass ich weitermache mit:
-- Messaging (SQS/SNS)
-- CDN (CloudFront)
-- Authentication (Cognito)
-- Observability (CloudWatch)
-- Advanced Configuration
-- Deployment-Strategien?
+## 📨 Messaging Constructs
+
+### 7. SqsQueueEncrypted
+
+**Minimal:**
+```typescript
+import { SqsQueueEncrypted } from '@vibtellect/aws-cdk-constructs';
+
+const queue = new SqsQueueEncrypted(this, 'MyQueue', {
+  queueName: 'my-app-queue'
+});
+
+// Zugriff
+const sqsQueue = queue.queue;         // sqs.Queue
+const queueUrl = queue.queueUrl;      // string
+const queueArn = queue.queueArn;      // string
+```
+
+**Vollständig:**
+```typescript
+import * as cdk from 'aws-cdk-lib';
+import { KmsKeyManaged, SqsQueueEncrypted } from '@vibtellect/aws-cdk-constructs';
+
+// Optional: Eigener KMS Key
+const kmsKey = new KmsKeyManaged(this, 'QueueKey', {
+  keyAlias: 'my-app-queue-key',
+  enableKeyRotation: true
+});
+
+const queue = new SqsQueueEncrypted(this, 'MyQueue', {
+  queueName: 'my-app-queue',
+
+  // Nachrichten-Konfiguration
+  visibilityTimeout: cdk.Duration.seconds(300),
+  receiveMessageWaitTime: cdk.Duration.seconds(20),  // Long polling
+  retentionPeriod: cdk.Duration.days(14),
+
+  // Dead Letter Queue
+  enableDeadLetterQueue: true,
+  maxReceiveCount: 3,
+  deadLetterQueueRetention: cdk.Duration.days(14),
+
+  // Verschlüsselung
+  encryptionKey: kmsKey.key,  // Optional (Standard: AWS managed key)
+
+  // FIFO Queue
+  fifo: false,
+
+  // Removal Policy
+  removalPolicy: cdk.RemovalPolicy.RETAIN,
+
+  // Tags
+  tags: {
+    Environment: 'production',
+    Application: 'my-app'
+  }
+});
+
+// Dead Letter Queue zugreifen (falls aktiviert)
+if (queue.deadLetterQueue) {
+  const dlqUrl = queue.deadLetterQueue.queueUrl;
+}
+```
+
+**Eigenschaften:**
+| Property | Typ | Default | Beschreibung |
+|----------|-----|---------|--------------|
+| `queueName` | string | required | Name der Queue |
+| `visibilityTimeout` | Duration | 30s | Sichtbarkeits-Timeout |
+| `receiveMessageWaitTime` | Duration | 0s | Long polling Zeit |
+| `retentionPeriod` | Duration | 14 Tage | Nachrichten-Aufbewahrung |
+| `enableDeadLetterQueue` | boolean | false | DLQ aktivieren |
+| `maxReceiveCount` | number | 3 | Max. Empfangsversuche |
+| `fifo` | boolean | false | FIFO Queue |
+| `encryptionKey` | IKey | undefined | KMS Key (optional) |
+
+---
+
+### 8. SnsTopicEncrypted
+
+**Minimal:**
+```typescript
+import { SnsTopicEncrypted } from '@vibtellect/aws-cdk-constructs';
+
+const topic = new SnsTopicEncrypted(this, 'MyTopic', {
+  topicName: 'my-app-notifications'
+});
+
+// Subscription hinzufügen
+topic.topic.addSubscription(new subscriptions.EmailSubscription('team@example.com'));
+```
+
+**Vollständig:**
+```typescript
+import * as cdk from 'aws-cdk-lib';
+import * as sns_subscriptions from 'aws-cdk-lib/aws-sns-subscriptions';
+import { KmsKeyManaged, SnsTopicEncrypted, SqsQueueEncrypted } from '@vibtellect/aws-cdk-constructs';
+
+// KMS Key für Verschlüsselung
+const kmsKey = new KmsKeyManaged(this, 'TopicKey', {
+  keyAlias: 'my-app-topic-key',
+  enableSnsAccess: true
+});
+
+const topic = new SnsTopicEncrypted(this, 'MyTopic', {
+  topicName: 'my-app-notifications',
+  displayName: 'My App Notifications',
+
+  // FIFO Topic
+  fifo: false,
+
+  // Verschlüsselung
+  encryptionKey: kmsKey.key,
+
+  // Delivery Policy
+  deliveryRetryAttempts: 5,
+
+  // Tags
+  tags: {
+    Environment: 'production',
+    CostCenter: 'engineering'
+  }
+});
+
+// Email Subscription
+topic.topic.addSubscription(
+  new sns_subscriptions.EmailSubscription('alerts@example.com')
+);
+
+// SQS Subscription
+const queue = new SqsQueueEncrypted(this, 'Queue', {
+  queueName: 'notifications-queue'
+});
+topic.topic.addSubscription(
+  new sns_subscriptions.SqsSubscription(queue.queue)
+);
+
+// Lambda Subscription
+topic.topic.addSubscription(
+  new sns_subscriptions.LambdaSubscription(myFunction)
+);
+```
+
+**Eigenschaften:**
+| Property | Typ | Default | Beschreibung |
+|----------|-----|---------|--------------|
+| `topicName` | string | required | Topic Name |
+| `displayName` | string | undefined | Anzeigename |
+| `fifo` | boolean | false | FIFO Topic |
+| `encryptionKey` | IKey | undefined | KMS Key (optional) |
+| `deliveryRetryAttempts` | number | 3 | Wiederholungsversuche |
+
+---
+
+## 🌐 CDN & Networking
+
+### 9. CloudFrontDistributionSecure
+
+**Minimal:**
+```typescript
+import { S3BucketSecure, CloudFrontDistributionSecure } from '@vibtellect/aws-cdk-constructs';
+
+const bucket = new S3BucketSecure(this, 'WebsiteBucket', {
+  bucketName: 'my-website-content'
+});
+
+const distribution = new CloudFrontDistributionSecure(this, 'CDN', {
+  originBucket: bucket.bucket,
+  comment: 'My website CDN'
+});
+
+// Zugriff
+const distId = distribution.distributionId;           // string
+const domainName = distribution.distributionDomainName;  // string (xxx.cloudfront.net)
+```
+
+**Vollständig:**
+```typescript
+import * as cdk from 'aws-cdk-lib';
+import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
+import {
+  S3BucketSecure,
+  CloudFrontDistributionSecure
+} from '@vibtellect/aws-cdk-constructs';
+
+const bucket = new S3BucketSecure(this, 'WebsiteBucket', {
+  bucketName: 'my-website-content',
+  versioned: true
+});
+
+const distribution = new CloudFrontDistributionSecure(this, 'CDN', {
+  originBucket: bucket.bucket,
+  comment: 'Production website CDN',
+
+  // Default Behavior
+  defaultBehavior: {
+    viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+    allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
+    cachedMethods: cloudfront.CachedMethods.CACHE_GET_HEAD_OPTIONS,
+    compress: true,
+    cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED
+  },
+
+  // Geo Restrictions
+  geoRestriction: cloudfront.GeoRestriction.allowlist('DE', 'AT', 'CH'),
+
+  // Custom Domain (benötigt ACM Zertifikat in us-east-1)
+  certificate: myCertificate,
+  domainNames: ['www.example.com'],
+
+  // Error Responses
+  errorResponses: [
+    {
+      httpStatus: 404,
+      responseHttpStatus: 200,
+      responsePagePath: '/index.html',  // SPA fallback
+      ttl: cdk.Duration.seconds(300)
+    }
+  ],
+
+  // Logging
+  enableLogging: true,
+  logBucket: logBucket.bucket,
+  logFilePrefix: 'cloudfront/',
+
+  // Price Class
+  priceClass: cloudfront.PriceClass.PRICE_CLASS_100,  // Nur USA, Europa
+
+  // WAF Web ACL
+  webAclId: myWebAcl.attrArn,
+
+  // Tags
+  tags: {
+    Environment: 'production'
+  }
+});
+
+// Output
+new cdk.CfnOutput(this, 'DistributionURL', {
+  value: `https://${distribution.distributionDomainName}`,
+  description: 'CloudFront Distribution URL'
+});
+```
+
+**Eigenschaften:**
+| Property | Typ | Default | Beschreibung |
+|----------|-----|---------|--------------|
+| `originBucket` | IBucket | required | S3 Origin Bucket |
+| `comment` | string | undefined | Beschreibung |
+| `defaultBehavior` | BehaviorOptions | HTTPS-only | Caching-Verhalten |
+| `geoRestriction` | GeoRestriction | undefined | Geo-Einschränkungen |
+| `certificate` | ICertificate | undefined | ACM Zertifikat |
+| `domainNames` | string[] | undefined | Custom Domains |
+| `enableLogging` | boolean | false | Access Logs |
+| `webAclId` | string | undefined | WAF Web ACL ID |
+
+---
+
+### 10. Route53HostedZoneStandard
+
+**Minimal - Public Zone:**
+```typescript
+import { Route53HostedZoneStandard } from '@vibtellect/aws-cdk-constructs';
+
+const zone = new Route53HostedZoneStandard(this, 'Zone', {
+  zoneName: 'example.com'
+});
+
+// Zugriff
+const hostedZone = zone.hostedZone;        // IHostedZone
+const zoneId = zone.hostedZoneId;          // string
+const nameServers = zone.hostedZoneNameServers;  // string[]
+```
+
+**Private Zone mit VPC:**
+```typescript
+import * as ec2 from 'aws-cdk-lib/aws-ec2';
+
+const vpc = new ec2.Vpc(this, 'VPC');
+
+const privateZone = new Route53HostedZoneStandard(this, 'PrivateZone', {
+  zoneName: 'internal.example.com',
+  comment: 'Internal DNS zone',
+
+  // VPC Association für Private Zone
+  vpcs: [
+    {
+      vpcId: vpc.vpcId,
+      region: 'eu-central-1'
+    }
+  ],
+
+  // Tags
+  tags: {
+    Environment: 'production',
+    Type: 'private'
+  }
+});
+```
+
+**Multi-VPC Private Zone:**
+```typescript
+const multiVpcZone = new Route53HostedZoneStandard(this, 'MultiVpcZone', {
+  zoneName: 'shared.internal',
+  comment: 'Shared DNS across VPCs',
+
+  vpcs: [
+    { vpcId: vpc1.vpcId, region: 'eu-central-1' },
+    { vpcId: vpc2.vpcId, region: 'us-east-1' },
+    { vpcId: vpc3.vpcId, region: 'ap-southeast-1' }
+  ]
+});
+```
+
+**Eigenschaften:**
+| Property | Typ | Default | Beschreibung |
+|----------|-----|---------|--------------|
+| `zoneName` | string | required | Domain Name |
+| `comment` | string | undefined | Beschreibung |
+| `vpcs` | VpcConfig[] | undefined | VPCs (für Private Zone) |
+| `tags` | Record | undefined | Tags |
+
+---
+
+### 11. Route53RecordSetStandard
+
+**Simple A Record:**
+```typescript
+import * as route53 from 'aws-cdk-lib/aws-route53';
+import { Route53RecordSetStandard } from '@vibtellect/aws-cdk-constructs';
+
+const record = new Route53RecordSetStandard(this, 'ARecord', {
+  hostedZone: zone.hostedZone,
+  recordName: 'www.example.com',
+  recordType: route53.RecordType.A,
+  target: route53.RecordTarget.fromIpAddresses('192.0.2.1', '192.0.2.2')
+});
+```
+
+**CloudFront Alias:**
+```typescript
+import * as route53 from 'aws-cdk-lib/aws-route53';
+import * as targets from 'aws-cdk-lib/aws-route53-targets';
+
+const alias = new Route53RecordSetStandard(this, 'CloudFrontAlias', {
+  hostedZone: zone.hostedZone,
+  recordName: 'www.example.com',
+  recordType: route53.RecordType.A,
+  target: route53.RecordTarget.fromAlias(
+    new targets.CloudFrontTarget(distribution.distribution)
+  )
+});
+```
+
+**Weighted Routing (Load Distribution):**
+```typescript
+// 70% Traffic zu Server 1
+const weighted1 = new Route53RecordSetStandard(this, 'Weighted1', {
+  hostedZone: zone.hostedZone,
+  recordName: 'api.example.com',
+  recordType: route53.RecordType.A,
+  target: route53.RecordTarget.fromIpAddresses('192.0.2.1'),
+  weight: 70,
+  setIdentifier: 'server-1'
+});
+
+// 30% Traffic zu Server 2
+const weighted2 = new Route53RecordSetStandard(this, 'Weighted2', {
+  hostedZone: zone.hostedZone,
+  recordName: 'api.example.com',
+  recordType: route53.RecordType.A,
+  target: route53.RecordTarget.fromIpAddresses('192.0.2.2'),
+  weight: 30,
+  setIdentifier: 'server-2'
+});
+```
+
+**Failover Routing (High Availability):**
+```typescript
+// Primary Server
+const primary = new Route53RecordSetStandard(this, 'Primary', {
+  hostedZone: zone.hostedZone,
+  recordName: 'app.example.com',
+  recordType: route53.RecordType.A,
+  target: route53.RecordTarget.fromIpAddresses('192.0.2.1'),
+  failover: 'PRIMARY',
+  setIdentifier: 'primary-server'
+});
+
+// Secondary/Backup Server
+const secondary = new Route53RecordSetStandard(this, 'Secondary', {
+  hostedZone: zone.hostedZone,
+  recordName: 'app.example.com',
+  recordType: route53.RecordType.A,
+  target: route53.RecordTarget.fromIpAddresses('192.0.2.2'),
+  failover: 'SECONDARY',
+  setIdentifier: 'backup-server'
+});
+```
+
+**Geolocation Routing:**
+```typescript
+// Europa
+const europeRecord = new Route53RecordSetStandard(this, 'EuropeRecord', {
+  hostedZone: zone.hostedZone,
+  recordName: 'cdn.example.com',
+  recordType: route53.RecordType.A,
+  target: route53.RecordTarget.fromIpAddresses('192.0.2.10'),
+  geoLocation: {
+    continentCode: 'EU'
+  },
+  setIdentifier: 'europe-server'
+});
+
+// USA
+const usRecord = new Route53RecordSetStandard(this, 'USRecord', {
+  hostedZone: zone.hostedZone,
+  recordName: 'cdn.example.com',
+  recordType: route53.RecordType.A,
+  target: route53.RecordTarget.fromIpAddresses('192.0.2.20'),
+  geoLocation: {
+    countryCode: 'US'
+  },
+  setIdentifier: 'us-server'
+});
+```
+
+**Latency-based Routing:**
+```typescript
+// EU Server
+const euServer = new Route53RecordSetStandard(this, 'EUServer', {
+  hostedZone: zone.hostedZone,
+  recordName: 'api.example.com',
+  recordType: route53.RecordType.A,
+  target: route53.RecordTarget.fromIpAddresses('192.0.2.100'),
+  region: 'eu-central-1',
+  setIdentifier: 'eu-server'
+});
+
+// US Server
+const usServer = new Route53RecordSetStandard(this, 'USServer', {
+  hostedZone: zone.hostedZone,
+  recordName: 'api.example.com',
+  recordType: route53.RecordType.A,
+  target: route53.RecordTarget.fromIpAddresses('192.0.2.200'),
+  region: 'us-east-1',
+  setIdentifier: 'us-server'
+});
+```
+
+**Eigenschaften:**
+| Property | Typ | Default | Beschreibung |
+|----------|-----|---------|--------------|
+| `hostedZone` | IHostedZone | required | Hosted Zone |
+| `recordName` | string | required | Record Name |
+| `recordType` | RecordType | required | Record Typ (A, AAAA, CNAME, etc.) |
+| `target` | RecordTarget | required | Target (IP, Alias, etc.) |
+| `ttl` | Duration | 300s | Time To Live |
+| `weight` | number | undefined | Gewichtung (0-255) |
+| `failover` | string | undefined | PRIMARY oder SECONDARY |
+| `geoLocation` | GeoLocation | undefined | Geo-Routing |
+| `region` | string | undefined | Latency-Routing Region |
+| `setIdentifier` | string | undefined | Routing Policy ID (required für routing policies) |
+
+---
+
+## 🔐 Authentication
+
+### 12. CognitoUserPoolStandard
+
+**Minimal:**
+```typescript
+import { CognitoUserPoolStandard } from '@vibtellect/aws-cdk-constructs';
+
+const userPool = new CognitoUserPoolStandard(this, 'UserPool', {
+  userPoolName: 'my-app-users'
+});
+
+// User Pool Client erstellen
+const client = userPool.userPool.addClient('WebClient', {
+  authFlows: {
+    userPassword: true,
+    userSrp: true
+  }
+});
+```
+
+**Vollständig:**
+```typescript
+import * as cdk from 'aws-cdk-lib';
+import * as cognito from 'aws-cdk-lib/aws-cognito';
+
+const userPool = new CognitoUserPoolStandard(this, 'UserPool', {
+  userPoolName: 'my-app-users',
+
+  // Email Configuration
+  emailFromAddress: 'noreply@example.com',
+  emailFromName: 'My App',
+
+  // Password Policy
+  passwordMinLength: 12,
+  requireLowercase: true,
+  requireUppercase: true,
+  requireDigits: true,
+  requireSymbols: true,
+
+  // MFA
+  mfaType: 'OPTIONAL',  // 'OFF', 'OPTIONAL', 'REQUIRED'
+  enableSmsRole: true,
+
+  // Self-Service
+  selfSignUpEnabled: true,
+  emailVerificationRequired: true,
+
+  // Account Recovery
+  accountRecoveryMethods: ['email', 'phone'],
+
+  // Lambda Triggers
+  preSignUp: preSignUpFunction.function,
+  postConfirmation: postConfirmationFunction.function,
+  preAuthentication: preAuthFunction.function,
+
+  // Removal Policy
+  removalPolicy: cdk.RemovalPolicy.RETAIN,
+
+  // Tags
+  tags: {
+    Environment: 'production',
+    Application: 'my-app'
+  }
+});
+
+// App Client mit detaillierten Settings
+const webClient = userPool.userPool.addClient('WebClient', {
+  userPoolClientName: 'web-app-client',
+  authFlows: {
+    userPassword: true,
+    userSrp: true,
+    custom: true
+  },
+  oAuth: {
+    flows: {
+      authorizationCodeGrant: true
+    },
+    scopes: [
+      cognito.OAuthScope.OPENID,
+      cognito.OAuthScope.EMAIL,
+      cognito.OAuthScope.PROFILE
+    ],
+    callbackUrls: ['https://example.com/callback'],
+    logoutUrls: ['https://example.com/logout']
+  },
+  refreshTokenValidity: cdk.Duration.days(30),
+  accessTokenValidity: cdk.Duration.hours(1),
+  idTokenValidity: cdk.Duration.hours(1)
+});
+
+// Domain für Hosted UI
+const domain = userPool.userPool.addDomain('Domain', {
+  cognitoDomain: {
+    domainPrefix: 'my-app-auth'
+  }
+});
+
+// Identity Pool (für AWS Credentials)
+const identityPool = new cognito.CfnIdentityPool(this, 'IdentityPool', {
+  allowUnauthenticatedIdentities: false,
+  cognitoIdentityProviders: [{
+    clientId: webClient.userPoolClientId,
+    providerName: userPool.userPool.userPoolProviderName
+  }]
+});
+```
+
+**Eigenschaften:**
+| Property | Typ | Default | Beschreibung |
+|----------|-----|---------|--------------|
+| `userPoolName` | string | required | User Pool Name |
+| `emailFromAddress` | string | undefined | Email Absender |
+| `passwordMinLength` | number | 8 | Min. Passwort-Länge |
+| `mfaType` | string | 'OFF' | MFA Einstellung |
+| `selfSignUpEnabled` | boolean | false | Self-Service Registrierung |
+| `preSignUp` | IFunction | undefined | Pre-SignUp Lambda Trigger |
+
+---
+
+## 📊 Observability
+
+### 13. LogGroupShortRetention
+
+**Minimal:**
+```typescript
+import { LogGroupShortRetention } from '@vibtellect/aws-cdk-constructs';
+
+const logGroup = new LogGroupShortRetention(this, 'AppLogs', {
+  logGroupName: '/aws/app/my-service'
+});
+
+// Lambda mit Log Group verbinden
+const fn = new lambda.Function(this, 'Fn', {
+  runtime: lambda.Runtime.NODEJS_18_X,
+  handler: 'index.handler',
+  code: lambda.Code.fromAsset('lambda'),
+  logGroup: logGroup.logGroup
+});
+```
+
+**Vollständig:**
+```typescript
+import * as cdk from 'aws-cdk-lib';
+import * as logs from 'aws-cdk-lib/aws-logs';
+import { KmsKeyManaged, LogGroupShortRetention } from '@vibtellect/aws-cdk-constructs';
+
+// KMS Key für Verschlüsselung
+const kmsKey = new KmsKeyManaged(this, 'LogsKey', {
+  keyAlias: 'logs-encryption-key',
+  enableLogsAccess: true
+});
+
+const logGroup = new LogGroupShortRetention(this, 'AppLogs', {
+  logGroupName: '/aws/app/my-service',
+
+  // Retention (cost-optimized default: 2 weeks)
+  retentionDays: logs.RetentionDays.TWO_WEEKS,
+
+  // Verschlüsselung
+  encryptionKey: kmsKey.key,
+
+  // Removal Policy
+  removalPolicy: cdk.RemovalPolicy.DESTROY,  // Für Dev
+
+  // Tags
+  tags: {
+    Environment: 'production',
+    CostCenter: 'engineering'
+  }
+});
+
+// Metric Filter erstellen
+const errorMetric = logGroup.logGroup.addMetricFilter('ErrorMetric', {
+  filterPattern: logs.FilterPattern.literal('[level=ERROR]'),
+  metricNamespace: 'MyApp',
+  metricName: 'ErrorCount',
+  metricValue: '1',
+  defaultValue: 0
+});
+
+// Subscription Filter (z.B. zu Kinesis/Lambda)
+logGroup.logGroup.addSubscriptionFilter('Subscription', {
+  destination: new logs_destinations.LambdaDestination(processorFunction),
+  filterPattern: logs.FilterPattern.allEvents()
+});
+
+// Zugriff
+const logGroupName = logGroup.logGroupName;  // string
+const logGroupArn = logGroup.logGroupArn;    // string
+```
+
+**Eigenschaften:**
+| Property | Typ | Default | Beschreibung |
+|----------|-----|---------|--------------|
+| `logGroupName` | string | required | Log Group Name |
+| `retentionDays` | RetentionDays | TWO_WEEKS | Aufbewahrungsdauer |
+| `encryptionKey` | IKey | undefined | KMS Key (optional) |
+| `removalPolicy` | RemovalPolicy | DESTROY (dev) / RETAIN (prod) | Lösch-Policy |
+
+---
+
+## 🎯 Vollständiges Beispiel: Serverless API
+
+```typescript
+import * as cdk from 'aws-cdk-lib';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as apigateway from 'aws-cdk-lib/aws-apigateway';
+import {
+  KmsKeyManaged,
+  LogGroupShortRetention,
+  IamRoleLambdaBasic,
+  LambdaFunctionSecure,
+  DynamoDbTableStandard,
+  ApiGatewayRestApiStandard,
+  CloudFrontDistributionSecure,
+  Route53HostedZoneStandard,
+  Route53RecordSetStandard
+} from '@vibtellect/aws-cdk-constructs';
+
+export class ServerlessApiStack extends cdk.Stack {
+  constructor(scope: cdk.App, id: string, props?: cdk.StackProps) {
+    super(scope, id, props);
+
+    // 1. KMS Key für Verschlüsselung
+    const kmsKey = new KmsKeyManaged(this, 'AppKey', {
+      keyAlias: 'my-app-key',
+      enableKeyRotation: true,
+      enableDynamoDbAccess: true,
+      enableLogsAccess: true
+    });
+
+    // 2. DynamoDB Tabelle
+    const table = new DynamoDbTableStandard(this, 'Table', {
+      tableName: 'my-app-data',
+      partitionKey: { name: 'pk', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'sk', type: dynamodb.AttributeType.STRING },
+      encryptionKey: kmsKey.key
+    });
+
+    // 3. Lambda Logs
+    const logs = new LogGroupShortRetention(this, 'Logs', {
+      logGroupName: '/aws/lambda/my-api',
+      encryptionKey: kmsKey.key
+    });
+
+    // 4. Lambda IAM Role
+    const role = new IamRoleLambdaBasic(this, 'LambdaRole', {
+      roleName: 'my-api-lambda-role',
+      enableXRay: true
+    });
+
+    // DynamoDB Permissions
+    table.table.grantReadWriteData(role.role);
+
+    // 5. Lambda Function
+    const fn = new LambdaFunctionSecure(this, 'ApiFunction', {
+      functionName: 'my-api-handler',
+      runtime: lambda.Runtime.NODEJS_18_X,
+      handler: 'index.handler',
+      code: lambda.Code.fromAsset('lambda'),
+      role: role.role,
+      logGroup: logs.logGroup,
+      environment: {
+        TABLE_NAME: table.tableName,
+        NODE_ENV: 'production'
+      },
+      reservedConcurrentExecutions: 10
+    });
+
+    // 6. API Gateway
+    const api = new ApiGatewayRestApiStandard(this, 'Api', {
+      restApiName: 'my-api',
+      deployOptions: {
+        stageName: 'prod',
+        loggingLevel: apigateway.MethodLoggingLevel.INFO
+      }
+    });
+
+    // Routes
+    const items = api.restApi.root.addResource('items');
+    items.addMethod('GET', new apigateway.LambdaIntegration(fn.function));
+    items.addMethod('POST', new apigateway.LambdaIntegration(fn.function));
+
+    // 7. CloudFront CDN
+    const distribution = new CloudFrontDistributionSecure(this, 'CDN', {
+      originBucket: myBucket.bucket,  // S3 Bucket mit Static Assets
+      comment: 'API CDN'
+    });
+
+    // 8. Route53 DNS
+    const zone = new Route53HostedZoneStandard(this, 'Zone', {
+      zoneName: 'example.com'
+    });
+
+    const apiRecord = new Route53RecordSetStandard(this, 'ApiRecord', {
+      hostedZone: zone.hostedZone,
+      recordName: 'api.example.com',
+      recordType: route53.RecordType.A,
+      target: route53.RecordTarget.fromAlias(
+        new targets.CloudFrontTarget(distribution.distribution)
+      )
+    });
+
+    // Outputs
+    new cdk.CfnOutput(this, 'ApiUrl', {
+      value: api.apiUrl
+    });
+    new cdk.CfnOutput(this, 'TableName', {
+      value: table.tableName
+    });
+  }
+}
+```
+
+---
+
+## 💡 Best Practices
+
+### Kosten-Optimierung
+- **LogGroupShortRetention**: 14 Tage Retention spart ~70% Kosten
+- **DynamoDB**: On-Demand Pricing für unvorhersehbare Workloads
+- **CloudFront**: PriceClass_100 für EU/US Only
+- **Lambda**: Reservierte Concurrency für kritische Functions
+
+### Security
+- **KMS**: Immer Customer Managed Keys für Production
+- **S3**: Block Public Access standardmäßig aktiviert
+- **API Gateway**: Resource Policies für IP-Whitelist
+- **CloudFront**: HTTPS-only, TLS 1.2+
+
+### High Availability
+- **Route53**: Failover Routing für kritische Services
+- **DynamoDB**: Point-in-Time Recovery aktivieren
+- **Lambda**: Multi-AZ durch AWS automatisch
+- **S3**: Cross-Region Replication für kritische Daten
+
+---
+
+Vollständige Dokumentation: [README_DE.md](./README_DE.md)
