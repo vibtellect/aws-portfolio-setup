@@ -96,24 +96,29 @@ new apigateway.LambdaIntegration(fn); // ✅ Funktioniert!
 
 ## Status
 
-### ✅ Implementierte Constructs
+### ✅ Implementierte Constructs (7/9 High-Priority DONE!)
 
-#### Kritisch (für Project 10)
+#### Kritisch (für Project 10) - 100% Complete!
 - ✅ **LambdaFunctionSecure** → `IFunction` (15+ properties, 15+ methods)
 - ✅ **IamRoleLambdaBasic** → `IRole` (10+ properties, 7 methods)
 - ✅ **DynamoDbTableStandard** → `ITable` (6 properties, 17+ methods)
 - ✅ **LogGroupShortRetention** → `ILogGroup` (4 properties, 11 methods)
 
-#### Status: 4/14 Constructs fertig (~29%)
+#### High Priority - 3/5 Complete (60%)
+- ✅ **SnsTopicEncrypted** → `ITopic` (5 properties, 15 methods)
+- ✅ **SqsQueueEncrypted** → `IQueue` (6 properties, 15 methods)
+- ✅ **KmsKeyManaged** → `IKey` (4 properties, 11 grant methods)
+
+#### Status: 7/14 Constructs fertig (50%)
 
 ### ⏳ Ausstehende Constructs
 
-#### High Priority (häufig verwendet)
-- **ApiGatewayRestApiStandard** → `IRestApi` (komplex, ~20+ methods)
-- **S3BucketSecure** → `IBucket` (komplex, ~30+ methods)
-- **KmsKeyManaged** → `IKey` (10+ grant methods)
-- **SqsQueueEncrypted** → `IQueue` (8+ methods)
-- **SnsTopicEncrypted** → `ITopic` (5+ methods)
+#### High Priority (noch 2 verbleibend)
+- ⏳ **S3BucketSecure** → `IBucket` (KOMPLEX: ~40+ methods - grants, metrics, notifications)
+- ⏳ **ApiGatewayRestApiStandard** → `IRestApi` (KOMPLEX: ~25+ methods - resources, methods)
+
+**Hinweis:** Diese 2 sind **sehr komplex** (~65+ combined methods). 
+Benötigen separate Session mit frischem Token-Budget für effiziente Implementierung.
 
 #### Medium Priority  
 - **CognitoUserPoolStandard** → `IUserPool`
