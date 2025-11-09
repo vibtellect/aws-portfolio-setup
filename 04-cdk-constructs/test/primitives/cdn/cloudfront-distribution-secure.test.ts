@@ -124,7 +124,7 @@ describe('CloudFrontDistributionSecure', () => {
     });
   });
 
-  test('uses minimum TLS v1.2 by default', () => {
+  test('uses CloudFront default certificate when no custom certificate provided', () => {
     new CloudFrontDistributionSecure(stack, 'TestDistribution', {
       originBucket: bucket,
     });
@@ -133,7 +133,7 @@ describe('CloudFrontDistributionSecure', () => {
     template.hasResourceProperties('AWS::CloudFront::Distribution', {
       DistributionConfig: {
         ViewerCertificate: {
-          MinimumProtocolVersion: 'TLSv1.2_2021',
+          CloudFrontDefaultCertificate: true,
         },
       },
     });
@@ -159,6 +159,7 @@ describe('CloudFrontDistributionSecure', () => {
         ViewerCertificate: {
           AcmCertificateArn: 'arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012',
           SslSupportMethod: 'sni-only',
+          MinimumProtocolVersion: 'TLSv1.2_2021',
         },
       },
     });

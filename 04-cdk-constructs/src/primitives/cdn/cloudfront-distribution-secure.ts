@@ -204,7 +204,7 @@ export class CloudFrontDistributionSecure extends Construct {
 
       // Origin configuration
       defaultBehavior: {
-        origin: origins.S3BucketOrigin.withOriginAccessIdentity(props.originBucket, {
+        origin: new origins.S3Origin(props.originBucket, {
           originPath: props.originPath,
           originAccessIdentity: this.originAccessIdentity,
         }),
@@ -213,11 +213,8 @@ export class CloudFrontDistributionSecure extends Construct {
         compress: true,
       },
 
-      // Security
-      certificate: props.certificate,
-      domainNames: props.domainNames,
-      minimumProtocolVersion: props.minimumProtocolVersion ?? cloudfront.SecurityPolicyProtocol.TLS_V1_2_2021,
-      sslSupportMethod: props.certificate ? cloudfront.SSLMethod.SNI : undefined,
+      // Security (ViewerCertificate)
+      certificate: viewerCertificate,
 
       // Performance & Cost
       priceClass: props.priceClass ?? cloudfront.PriceClass.PRICE_CLASS_100,
