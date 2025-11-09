@@ -191,9 +191,6 @@ export class CloudFrontDistributionSecure extends Construct {
       comment: `OAI for ${id}`,
     });
 
-    // Configure viewer certificate
-    const viewerCertificate = this.configureViewerCertificate(props);
-
     // Configure logging
     const loggingConfig = this.configureLogging(props);
 
@@ -213,8 +210,10 @@ export class CloudFrontDistributionSecure extends Construct {
         compress: true,
       },
 
-      // Security (ViewerCertificate)
-      certificate: viewerCertificate,
+      // Security (Certificate)
+      certificate: props.certificate,
+      domainNames: props.domainNames,
+      minimumProtocolVersion: props.minimumProtocolVersion ?? cloudfront.SecurityPolicyProtocol.TLS_V1_2_2021,
 
       // Performance & Cost
       priceClass: props.priceClass ?? cloudfront.PriceClass.PRICE_CLASS_100,
@@ -287,25 +286,6 @@ export class CloudFrontDistributionSecure extends Construct {
         'Use the logBucket property to specify an S3 bucket for logs.'
       );
     }
-  }
-
-  /**
-   * Configure viewer certificate
-   */
-  private configureViewerCertificate(
-    props: CloudFrontDistributionSecureProps
-  ): cloudfront.ViewerCertificate | undefined {
-    if (props.certificate && props.domainNames) {
-      return cloudfront.ViewerCertificate.fromAcmCertificate(
-        props.certificate,
-        {
-          aliases: props.domainNames,
-          securityPolicy: props.minimumProtocolVersion ?? cloudfront.SecurityPolicyProtocol.TLS_V1_2_2021,
-          sslMethod: cloudfront.SSLMethod.SNI,
-        }
-      );
-    }
-    return undefined;
   }
 
   /**

@@ -2,6 +2,7 @@ import { describe, test, beforeEach, expect } from '@jest/globals';
 import { App, Stack, Duration } from 'aws-cdk-lib';
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import * as route53 from 'aws-cdk-lib/aws-route53';
+import * as targets from 'aws-cdk-lib/aws-route53-targets';
 import * as elb from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import { Route53RecordSetStandard } from '../../../src/primitives/networking/route53-record-set-standard';
@@ -127,7 +128,7 @@ describe('Route53RecordSetStandard', () => {
       recordName: 'www.example.com',
       recordType: route53.RecordType.A,
       target: route53.RecordTarget.fromAlias(
-        new route53.targets.CloudFrontTarget(distribution)
+        new targets.CloudFrontTarget(distribution)
       )
     });
 
@@ -135,9 +136,10 @@ describe('Route53RecordSetStandard', () => {
     template.hasResourceProperties('AWS::Route53::RecordSet', {
       Name: 'www.example.com.',
       Type: 'A',
-      AliasTarget: Match.objectLike({
-        HostedZoneId: 'Z2FDTNDATAQYW2'  // CloudFront hosted zone ID
-      })
+      AliasTarget: {
+        DNSName: 'd111111abcdef8.cloudfront.net',
+        HostedZoneId: Match.anyValue()  // CloudFront hosted zone ID (can be string or Fn::FindInMap)
+      }
     });
   });
 

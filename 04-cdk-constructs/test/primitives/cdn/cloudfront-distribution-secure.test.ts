@@ -130,13 +130,14 @@ describe('CloudFrontDistributionSecure', () => {
     });
 
     const template = Template.fromStack(stack);
-    template.hasResourceProperties('AWS::CloudFront::Distribution', {
-      DistributionConfig: {
-        ViewerCertificate: {
-          CloudFrontDefaultCertificate: true,
-        },
-      },
-    });
+    const json = template.toJSON();
+    const distribution = Object.values(json.Resources).find(
+      (r: any) => r.Type === 'AWS::CloudFront::Distribution'
+    ) as any;
+
+    // When no certificate is provided, CDK doesn't set ViewerCertificate property
+    // CloudFront uses its default certificate in this case
+    expect(distribution.Properties.DistributionConfig.ViewerCertificate).toBeUndefined();
   });
 
   test('supports custom certificate when provided', () => {
@@ -432,12 +433,17 @@ describe('CloudFrontDistributionSecure', () => {
     });
 
     const template = Template.fromStack(stack);
-    template.hasResourceProperties('AWS::CloudFront::Distribution', {
-      Tags: Match.arrayWith([
-        { Key: 'ManagedBy', Value: 'CDK' },
-        { Key: 'Construct', Value: 'CloudFrontDistributionSecure' },
-      ]),
-    });
+    const json = template.toJSON();
+    const distribution = Object.values(json.Resources).find(
+      (r: any) => r.Type === 'AWS::CloudFront::Distribution'
+    ) as any;
+
+    const tags = distribution.Properties.Tags;
+    const tagMap = Object.fromEntries(tags.map((t: any) => [t.Key, t.Value]));
+
+    // Check that default tags are present
+    expect(tagMap['ManagedBy']).toBe('CDK');
+    expect(tagMap['Construct']).toBe('CloudFrontDistributionSecure');
   });
 
   test('allows custom tags', () => {

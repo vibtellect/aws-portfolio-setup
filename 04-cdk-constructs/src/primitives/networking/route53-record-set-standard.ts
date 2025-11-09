@@ -268,11 +268,14 @@ export class Route53RecordSetStandard extends Construct {
 
     // Geo location
     if (props.geoLocation) {
-      config.geoLocation = props.geoLocation.continentCode
-        ? route53.GeoLocation.continent(props.geoLocation.continentCode)
-        : props.geoLocation.countryCode
-        ? route53.GeoLocation.country(props.geoLocation.countryCode)
-        : undefined;
+      if (props.geoLocation.subdivisionCode && props.geoLocation.countryCode) {
+        // Subdivision takes precedence (most specific)
+        config.geoLocation = route53.GeoLocation.subdivision(props.geoLocation.countryCode, props.geoLocation.subdivisionCode);
+      } else if (props.geoLocation.countryCode) {
+        config.geoLocation = route53.GeoLocation.country(props.geoLocation.countryCode);
+      } else if (props.geoLocation.continentCode) {
+        config.geoLocation = route53.GeoLocation.continent(props.geoLocation.continentCode as any);
+      }
     }
 
     // Region for latency-based routing
