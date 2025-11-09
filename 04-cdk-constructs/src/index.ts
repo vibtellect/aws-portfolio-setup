@@ -54,3 +54,17 @@ export type { LambdaFunctionSecureProps } from './primitives/compute/lambda-func
 
 export { S3BucketSecure } from './primitives/storage/s3-bucket-secure';
 export type { S3BucketSecureProps } from './primitives/storage/s3-bucket-secure';
+
+// ============================================================================
+// PRIMITIVES - Auth
+// ============================================================================
+
+export { CognitoUserPoolStandard } from './primitives/auth/cognito-user-pool-standard';
+export type { CognitoUserPoolStandardProps } from './primitives/auth/cognito-user-pool-standard';
+
+// ============================================================================
+// PRIMITIVES - API
+// ============================================================================
+
+export { ApiGatewayRestApiStandard } from './primitives/api/api-gateway-rest-api-standard';
+export type { ApiGatewayRestApiStandardProps } from './primitives/api/api-gateway-rest-api-standard';
